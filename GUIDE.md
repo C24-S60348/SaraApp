@@ -12,7 +12,7 @@ GitHub Pages hosts these files for free. Flask (Python) needs a running server, 
 1. Open https://github.com/C24-S60348/SaraApp
 2. Click **Settings** (top tab) → **Pages** (left menu).
 3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
-4. Under **Branch**, choose `main` and folder `/ (root)`, then **Save**.
+4. Under **Branch**, choose `ccr-66309fba-ukb5pu` and folder `/ (root)`, then **Save**.
 5. Wait 1–2 minutes and refresh. A green box shows: **Your site is live at https://c24-s60348.github.io/SaraApp/**
 
 ## Change something
