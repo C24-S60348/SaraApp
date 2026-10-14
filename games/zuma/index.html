@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zuma Duo · SaraApp</title>
+  <link rel="stylesheet" href="zuma.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="pill" href="../../index.html">← SaraApp</a>
+    <span class="rotate-note">Best in landscape, on a computer</span>
+    <button class="pill" id="btn-restart" type="button">Restart</button>
+  </div>
+
+  <div class="stage">
+    <canvas id="c" width="1280" height="640"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="modal">
+        <h1 id="ov-title">Zuma Duo</h1>
+        <div id="ov-body">
+          <p>Work together. Stop the chain before it reaches the skull!<br>Shoot to make groups of <b>3 or more</b> of the same colour.</p>
+          <div class="controls">
+            <div class="ctl p1"><h3>P1 · Keyboard (left)</h3><p><kbd>←</kbd> <kbd>→</kbd> turn<br><kbd>↑</kbd> shoot<br><kbd>↓</kbd> switch colour</p></div>
+            <div class="ctl p2"><h3>P2 · Mouse (right)</h3><p>Move to aim<br>Left click: shoot<br>Right click: switch colour</p></div>
+          </div>
+        </div>
+        <button class="go" id="ov-btn" type="button">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="zuma.js"></script>
+</body>
+</html>

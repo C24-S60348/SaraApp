@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pet Puzzle Battle · SaraApp</title>
+  <link rel="stylesheet" href="pets.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="pill" href="../../index.html">← SaraApp</a>
+    <button class="pill" id="btn-restart" type="button">Restart</button>
+  </div>
+
+  <main class="arena">
+    <section class="pet-panel p1" id="panel-0"></section>
+    <section class="board-wrap">
+      <div class="turn" id="turn"></div>
+      <div class="board" id="board"></div>
+      <p class="hint" id="hint"></p>
+    </section>
+    <section class="pet-panel p2" id="panel-1"></section>
+  </main>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h1 id="ov-title">Pet Puzzle Battle</h1>
+      <p id="ov-text"></p>
+      <button class="go" id="ov-btn" type="button">Start</button>
+    </div>
+  </div>
+
+  <script src="pets.js"></script>
+</body>
+</html>

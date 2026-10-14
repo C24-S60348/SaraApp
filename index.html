@@ -12,50 +12,48 @@
     <nav>
       <a href="index.html">Home</a>
       <a href="games/tanam/index.html">Tanam Tanam</a>
+      <a href="games/pets/index.html">Pet Battle</a>
+      <a href="games/zuma/index.html">Zuma Duo</a>
       <a href="about.html">About</a>
     </nav>
   </header>
 
   <main>
     <section class="intro">
-      <h1>Our To-Do List</h1>
-      <p>Click a card to see more. You can change a status inside the card (it is saved in this browser only).</p>
+      <h1>Our Apps</h1>
+      <p>Each card is an app. Press <strong>Read more</strong> to see what is still to do inside it.</p>
     </section>
 
     <section class="prompt-box" aria-labelledby="pb-title">
       <h2 id="pb-title">Prompt to update this to-do list</h2>
       <p>Copy this, change the parts in [brackets], and send it to Claude:</p>
-      <div class="prompt-text" id="prompt-text">Update the SaraApp to-do list: [add / change / remove] "[title]". Status: [to do / in progress / done]. Description: [one or two sentences]. Link: [optional page]. Then push it and give me the live link.</div>
+      <div class="prompt-text" id="prompt-text">Update the SaraApp to-do list: in the app "[app name]", [add / tick as done / remove] the item "[item]". Then push it and give me the live link.</div>
       <button class="btn small" id="copy-prompt" type="button">Copy prompt</button>
       <details>
         <summary>For example</summary>
         <ul class="examples">
-          <li>Update the SaraApp to-do list: add "Fix the About page". Status: in progress. Description: check spelling and add a team photo.</li>
-          <li>Update the SaraApp to-do list: change "Tanam Tanam (game)" to done.</li>
-          <li>Update the SaraApp to-do list: add "Bayam" as a new plant in the Tanam Tanam game.</li>
-          <li>Update the SaraApp to-do list: remove "Swap drawings for Canva images".</li>
+          <li>Update the SaraApp to-do list: in the app "Tanam Tanam", add the item "Add timun as a new plant".</li>
+          <li>Update the SaraApp to-do list: in the app "Zuma Duo", tick "More levels with different paths" as done.</li>
+          <li>Update the SaraApp to-do list: add a new app "Quiz Time" with the description "A quick quiz for two players".</li>
+          <li>Update the SaraApp to-do list: in the app "Pet Puzzle Battle", remove the item "Sound effects".</li>
         </ul>
       </details>
     </section>
 
-    <div class="filters" id="filters" role="tablist" aria-label="Filter by status"></div>
     <div class="todo-grid" id="todo-list"></div>
-    <p class="empty" id="empty" hidden>Nothing here yet.</p>
   </main>
 
   <dialog id="todo-dialog">
     <form method="dialog"><button class="close" aria-label="Close">×</button></form>
     <h2 id="d-title"></h2>
-    <label class="status-row">Status
-      <select id="d-status">
-        <option value="todo">To do</option>
-        <option value="doing">In progress</option>
-        <option value="done">Done</option>
-      </select>
-    </label>
     <p id="d-desc"></p>
-    <ul id="d-notes"></ul>
-    <a id="d-link" class="btn" hidden>Open</a>
+    <h3>Still to do</h3>
+    <ul id="d-todo" class="checks"></ul>
+    <details id="d-done-box">
+      <summary id="d-done-count"></summary>
+      <ul id="d-done" class="checks"></ul>
+    </details>
+    <a id="d-link" class="btn" hidden>Play / Open</a>
   </dialog>
 
   <footer>Built with HTML, CSS and JavaScript</footer>

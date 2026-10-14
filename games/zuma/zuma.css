@@ -1,0 +1,23 @@
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; }
+body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#fff; background:#0b1f12; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { display:flex; justify-content:space-between; align-items:center; gap:.5rem; padding:.5rem .8rem; flex:0 0 auto; }
+.pill { font:inherit; font-weight:600; color:#14351f; background:rgba(255,255,255,.9); border:0; border-radius:999px; padding:.4rem 1rem; text-decoration:none; cursor:pointer; }
+.rotate-note { display:none; font-size:.85rem; color:#ffd54f; }
+.stage { position:relative; flex:1 1 auto; display:flex; align-items:center; justify-content:center; min-height:0; padding:0 .5rem .5rem; }
+canvas { display:block; width:min(100%, calc((100vh - 70px) * 2)); height:auto; aspect-ratio:2/1; border-radius:18px; box-shadow:0 10px 40px rgba(0,0,0,.6); cursor:crosshair; touch-action:none; }
+.overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(5,20,10,.6); padding:1rem; }
+.overlay[hidden] { display:none; }
+.modal { background:linear-gradient(160deg,#2e7d32,#14351f); border:2px solid rgba(255,255,255,.25); border-radius:24px; padding:1.3rem 1.6rem; max-width:560px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.modal h1 { margin:.1rem 0 .4rem; }
+.modal p { line-height:1.5; margin:.3rem 0; color:#e8f5e9; }
+.controls { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin:.8rem 0 1rem; text-align:left; }
+.ctl { border-radius:14px; padding:.6rem .9rem; background:rgba(0,0,0,.25); }
+.ctl h3 { margin:0 0 .3rem; font-size:.95rem; }
+.ctl.p1 { border-left:5px solid #42a5f5; } .ctl.p2 { border-left:5px solid #ef5350; }
+.ctl p { margin:0; font-size:.88rem; }
+kbd { background:#fff; color:#14351f; border-radius:5px; padding:0 .4rem; font-weight:700; }
+.go { font:inherit; font-weight:800; font-size:1.2rem; color:#14351f; background:linear-gradient(180deg,#ffe066,#ffb300); border:0; border-radius:999px; padding:.65rem 2.6rem; cursor:pointer; box-shadow:0 6px 0 #c67c00; }
+.go:active { transform:translateY(4px); box-shadow:0 2px 0 #c67c00; }
+@media (orientation:portrait) { .rotate-note { display:block; } canvas { width:100%; } .stage { align-items:flex-start; } }
+@media (max-height:480px) { .modal { padding:.7rem 1rem; } .controls { margin:.4rem 0 .6rem; } .modal p { font-size:.85rem; } }

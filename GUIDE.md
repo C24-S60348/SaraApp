@@ -27,3 +27,10 @@ Visitors can change a card's status in their own browser, but that is only saved
 
 ## Tanam Tanam game
 Files are in `games/tanam/`. Plant info is in `plants.js`. The plant pictures are drawings made in code (no emoji). They are placeholders and can be replaced with Canva images.
+
+## Home page = list of apps
+Each card on the home page is one app (Tanam Tanam, Pet Puzzle Battle, Zuma Duo). "Read more" shows what is still to do inside it. The data is in `data/todos.js`.
+
+## More games
+- `games/pets/` : Pet Puzzle Battle (2 players, take turns on one screen)
+- `games/zuma/` : Zuma Duo (P1 keyboard on the left, P2 mouse on the right)
