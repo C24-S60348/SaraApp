@@ -11,34 +11,39 @@
     <a class="brand" href="index.html">SaraApp</a>
     <nav>
       <a href="index.html">Home</a>
+      <a href="games/tanam/index.html">Tanam Tanam</a>
       <a href="about.html">About</a>
-      <a href="contact.html">Contact</a>
     </nav>
   </header>
 
   <main>
-    <section class="hero">
-      <h1>Welcome to SaraApp 👋</h1>
-      <p>This is a dummy website. It is live on GitHub Pages and you can test it online.</p>
-      <button id="greet-btn" class="btn">Click me</button>
-      <p id="greet-msg" class="msg"></p>
+    <section class="intro">
+      <h1>Our To-Do List</h1>
+      <p>Click a card to see more. You can change a status inside the card (it is saved in this browser only).</p>
     </section>
 
-    <section class="cards">
-      <div class="card"><h3>Incredible Speed</h3><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></div>
-      <div class="card"><h3>Simple</h3><p>Sed do eiusmod tempor incididunt ut labore et dolore.</p></div>
-      <div class="card"><h3>Yours</h3><p>Ut enim ad minim veniam, quis nostrud exercitation.</p></div>
-    </section>
-
-    <section class="counter">
-      <h2>Try it: a tiny counter</h2>
-      <p>Count: <strong id="count">0</strong></p>
-      <button id="plus" class="btn">+1</button>
-      <button id="reset" class="btn secondary">Reset</button>
-    </section>
+    <div class="filters" id="filters" role="tablist" aria-label="Filter by status"></div>
+    <div class="todo-grid" id="todo-list"></div>
+    <p class="empty" id="empty" hidden>Nothing here yet.</p>
   </main>
 
-  <footer>Built with HTML, CSS and JavaScript · dummy site</footer>
+  <dialog id="todo-dialog">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <h2 id="d-title"></h2>
+    <label class="status-row">Status
+      <select id="d-status">
+        <option value="todo">To do</option>
+        <option value="doing">In progress</option>
+        <option value="done">Done</option>
+      </select>
+    </label>
+    <p id="d-desc"></p>
+    <ul id="d-notes"></ul>
+    <a id="d-link" class="btn" hidden>Open</a>
+  </dialog>
+
+  <footer>Built with HTML, CSS and JavaScript</footer>
+  <script src="data/todos.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

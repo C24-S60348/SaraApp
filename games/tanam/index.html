@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tanam Tanam · SaraApp</title>
+  <link rel="stylesheet" href="tanam.css">
+</head>
+<body>
+  <div class="topbar">
+    <a class="pill" href="../../index.html">← SaraApp</a>
+    <button class="pill" id="btn-back" hidden>← Kembali</button>
+  </div>
+
+  <!-- 1. Main menu -->
+  <section class="screen" id="screen-menu">
+    <div class="menu-art" id="menu-art"></div>
+    <h1 class="logo">Tanam Tanam</h1>
+    <p class="tagline">Belajar menanam, langkah demi langkah.</p>
+    <button class="play" id="btn-play">Main</button>
+  </section>
+
+  <!-- 2. Pilih Tanaman -->
+  <section class="screen" id="screen-pilih" hidden>
+    <h2 class="title">Pilih Tanaman</h2>
+    <div class="grid" id="plant-grid"></div>
+  </section>
+
+  <!-- 3. How to tanam -->
+  <section class="screen" id="screen-detail" hidden>
+    <div class="detail">
+      <div class="stage-col">
+        <div class="stage-view" id="stage-view"></div>
+        <p class="stage-name" id="stage-name"></p>
+        <p class="stage-text" id="stage-text"></p>
+        <button class="water" id="btn-water">Siram air</button>
+      </div>
+      <div class="info-col">
+        <h2 class="title left" id="d-name"></h2>
+        <p class="d-desc" id="d-desc"></p>
+        <div class="facts" id="d-facts"></div>
+        <h3>Peringkat</h3>
+        <div class="stages" id="d-stages"></div>
+        <h3>Cara menanam</h3>
+        <ol id="d-steps"></ol>
+      </div>
+    </div>
+  </section>
+
+  <script src="plants.js"></script>
+  <script src="tanam.js"></script>
+</body>
+</html>

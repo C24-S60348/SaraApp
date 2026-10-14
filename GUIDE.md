@@ -20,3 +20,10 @@ Just tell Claude, e.g. "make the title red" or "add a Gallery page". Claude edit
 
 ## Test on your computer (optional)
 Double-click `index.html` and it opens in your browser.
+
+## The to-do list (home page)
+The cards on the home page come from `data/todos.js`. Each card has a title, status (todo / doing / done), a description and an optional `link` to a page or game. To add or change one, edit that file or just ask Claude.
+Visitors can change a card's status in their own browser, but that is only saved on their device. To change it for everyone, ask Claude.
+
+## Tanam Tanam game
+Files are in `games/tanam/`. Plant info is in `plants.js`. The plant pictures are drawings made in code (no emoji). They are placeholders and can be replaced with Canva images.
