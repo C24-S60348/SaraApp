@@ -73,3 +73,20 @@ document.getElementById("d-status").addEventListener("change", e => {
 dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
 
 render();
+
+// Copy the update prompt
+const copyBtn = document.getElementById("copy-prompt");
+copyBtn.addEventListener("click", async () => {
+  const text = document.getElementById("prompt-text").textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    copyBtn.textContent = "Copied!";
+  } catch (e) {
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById("prompt-text"));
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    copyBtn.textContent = "Press Ctrl+C to copy";
+  }
+  setTimeout(() => { copyBtn.textContent = "Copy prompt"; }, 2000);
+});

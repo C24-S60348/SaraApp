@@ -22,6 +22,22 @@
       <p>Click a card to see more. You can change a status inside the card (it is saved in this browser only).</p>
     </section>
 
+    <section class="prompt-box" aria-labelledby="pb-title">
+      <h2 id="pb-title">Prompt to update this to-do list</h2>
+      <p>Copy this, change the parts in [brackets], and send it to Claude:</p>
+      <div class="prompt-text" id="prompt-text">Update the SaraApp to-do list: [add / change / remove] "[title]". Status: [to do / in progress / done]. Description: [one or two sentences]. Link: [optional page]. Then push it and give me the live link.</div>
+      <button class="btn small" id="copy-prompt" type="button">Copy prompt</button>
+      <details>
+        <summary>For example</summary>
+        <ul class="examples">
+          <li>Update the SaraApp to-do list: add "Fix the About page". Status: in progress. Description: check spelling and add a team photo.</li>
+          <li>Update the SaraApp to-do list: change "Tanam Tanam (game)" to done.</li>
+          <li>Update the SaraApp to-do list: add "Bayam" as a new plant in the Tanam Tanam game.</li>
+          <li>Update the SaraApp to-do list: remove "Swap drawings for Canva images".</li>
+        </ul>
+      </details>
+    </section>
+
     <div class="filters" id="filters" role="tablist" aria-label="Filter by status"></div>
     <div class="todo-grid" id="todo-list"></div>
     <p class="empty" id="empty" hidden>Nothing here yet.</p>
