@@ -27,11 +27,11 @@ window.APPS = [
     desc: "Two players, two pets. Take turns matching blocks. Match your pet's colour to hit the enemy.",
     link: "games/pets/index.html",
     items: [
-      { t: "8x8 match-3 board with swapping", done: true },
+      { t: "6x6 match-3 board with big blocks and swipe", done: true },
       { t: "P1 vs P2 turn by turn", done: true },
       { t: "Only your pet's colour does damage", done: true },
       { t: "Health bars, attack animation and winner screen", done: true },
-      { t: "Choose your own pet and colour", done: false },
+      { t: "Players choose their own pet and colour (5 pets)", done: true },
       { t: "Special blocks (bomb, heal, shield)", done: false },
       { t: "Play against the computer", done: false },
       { t: "Play online with a friend on another phone", done: false },

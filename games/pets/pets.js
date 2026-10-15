@@ -1,4 +1,4 @@
-const N = 8;
+const N = 6; // 6x6 board = big blocks that are easy to swipe
 const COLORS = {
   blue:   ["#5fb4ff", "#1565c0"],
   red:    ["#ff7a7a", "#c62828"],
@@ -7,15 +7,20 @@ const COLORS = {
   purple: ["#c58bff", "#6a1b9a"]
 };
 const COLOR_IDS = Object.keys(COLORS);
-const PETS = [
-  { name: "Bubbles", color: "blue", ears: "round" },
-  { name: "Blaze", color: "red", ears: "pointy" }
+const PET_LIST = [
+  { name: "Bubbles", color: "blue", look: "round" },
+  { name: "Blaze", color: "red", look: "pointy" },
+  { name: "Leafy", color: "green", look: "leaf" },
+  { name: "Sunny", color: "yellow", look: "chick" },
+  { name: "Grape", color: "purple", look: "bunny" }
 ];
+let chosen = [PET_LIST[0], PET_LIST[1]]; // [P1's pet, P2's pet]
 const MAX_HP = 100;
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const board = $("board");
+board.style.setProperty("--n", N);
 
 let grid, turn = 0, busy = false, selected = null, nextId = 0, gameOver = true;
 let hp = [MAX_HP, MAX_HP];
@@ -23,12 +28,15 @@ let hp = [MAX_HP, MAX_HP];
 // ---------- pet drawing ----------
 function petSVG(p) {
   const [light, dark] = COLORS[p.color];
-  const ears = p.ears === "pointy"
-    ? `<path d="M26 44L30 12L52 34Z" fill="${dark}"/><path d="M94 44L90 12L68 34Z" fill="${dark}"/><path d="M32 38L33 22L44 33Z" fill="#ffc9c9"/><path d="M88 38L87 22L76 33Z" fill="#ffc9c9"/>`
-    : `<circle cx="32" cy="30" r="15" fill="${dark}"/><circle cx="88" cy="30" r="15" fill="${dark}"/><circle cx="32" cy="30" r="8" fill="#cfe9ff"/><circle cx="88" cy="30" r="8" fill="#cfe9ff"/>`;
-  const extra = p.ears === "pointy"
-    ? `<path d="M60 8C52 18 56 24 60 26C64 24 68 18 60 8Z" fill="#ffb300"/>`
-    : `<circle cx="60" cy="12" r="6" fill="#fff" opacity=".7"/>`;
+  const looks = {
+    round: [`<circle cx="32" cy="30" r="15" fill="${dark}"/><circle cx="88" cy="30" r="15" fill="${dark}"/><circle cx="32" cy="30" r="8" fill="#cfe9ff"/><circle cx="88" cy="30" r="8" fill="#cfe9ff"/>`, `<circle cx="60" cy="12" r="6" fill="#fff" opacity=".7"/>`],
+    pointy: [`<path d="M26 44L30 12L52 34Z" fill="${dark}"/><path d="M94 44L90 12L68 34Z" fill="${dark}"/><path d="M32 38L33 22L44 33Z" fill="#ffc9c9"/><path d="M88 38L87 22L76 33Z" fill="#ffc9c9"/>`, `<path d="M60 8C52 18 56 24 60 26C64 24 68 18 60 8Z" fill="#ffb300"/>`],
+    bunny: [`<ellipse cx="42" cy="22" rx="11" ry="26" fill="${dark}"/><ellipse cx="78" cy="22" rx="11" ry="26" fill="${dark}"/><ellipse cx="42" cy="24" rx="5" ry="18" fill="#ffd6f0"/><ellipse cx="78" cy="24" rx="5" ry="18" fill="#ffd6f0"/>`, ""],
+    leaf: [`<circle cx="30" cy="36" r="11" fill="${dark}"/><circle cx="90" cy="36" r="11" fill="${dark}"/>`, `<path d="M60 26C52 14 40 12 36 16C40 26 52 30 60 26Z" fill="#2e7d32"/><path d="M60 26C68 14 80 12 84 16C80 26 68 30 60 26Z" fill="#43a047"/>`],
+    chick: [`<circle cx="30" cy="40" r="10" fill="${dark}"/><circle cx="90" cy="40" r="10" fill="${dark}"/>`, `<path d="M52 24C50 12 54 8 56 6C57 12 58 16 60 22C62 14 66 10 70 8C70 16 66 22 64 26Z" fill="#ff8f00"/>`]
+  };
+  const [ears, extra] = looks[p.look];
+  const beak = p.look === "chick" ? `<path d="M52 74L68 74L60 86Z" fill="#ff8f00"/>` : "";
   return `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${p.name}">
     ${ears}${extra}
     <ellipse cx="60" cy="98" rx="30" ry="18" fill="${dark}"/>
@@ -38,13 +46,13 @@ function petSVG(p) {
     <circle cx="46" cy="63" r="4.5" fill="#1b1b2f"/><circle cx="78" cy="63" r="4.5" fill="#1b1b2f"/>
     <circle cx="47.5" cy="61" r="1.6" fill="#fff"/><circle cx="79.5" cy="61" r="1.6" fill="#fff"/>
     <ellipse cx="32" cy="76" rx="7" ry="4.5" fill="#ff8a9b" opacity=".7"/><ellipse cx="88" cy="76" rx="7" ry="4.5" fill="#ff8a9b" opacity=".7"/>
-    <path d="M52 80Q60 88 68 80" stroke="#1b1b2f" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M57 73h6l-3 4z" fill="#1b1b2f"/>
+    ${p.look === "chick" ? "" : '<path d="M52 80Q60 88 68 80" stroke="#1b1b2f" stroke-width="3" fill="none" stroke-linecap="round"/>'}
+    ${p.look === "chick" ? beak : '<path d="M57 73h6l-3 4z" fill="#1b1b2f"/>'}
   </svg>`;
 }
 
 function buildPanels() {
-  PETS.forEach((p, i) => {
+  chosen.forEach((p, i) => {
     $("panel-" + i).innerHTML =
       `<div class="who">P${i + 1}</div>
        <div class="pet" id="pet-${i}">${petSVG(p)}</div>
@@ -56,13 +64,13 @@ function buildPanels() {
 }
 
 function updateHP() {
-  PETS.forEach((_, i) => {
+  chosen.forEach((_, i) => {
     $("hp-" + i).style.width = Math.max(0, hp[i]) + "%";
     $("hptext-" + i).textContent = Math.max(0, hp[i]) + " / " + MAX_HP + " HP";
   });
 }
 function updateTurn() {
-  $("turn").textContent = gameOver ? "" : "P" + (turn + 1) + "'s turn · " + PETS[turn].name;
+  $("turn").textContent = gameOver ? "" : "P" + (turn + 1) + "'s turn · " + chosen[turn].name;
   $("turn").dataset.p = turn;
   [0, 1].forEach(i => $("panel-" + i).classList.toggle("active", !gameOver && i === turn));
 }
@@ -180,7 +188,7 @@ async function attack(from, amount) {
 }
 
 async function resolve() {
-  const color = PETS[turn].color;
+  const color = chosen[turn].color;
   let chain = 0, total = 0;
   for (;;) {
     const runs = findRuns();
@@ -244,7 +252,7 @@ async function trySwap(a, b) {
   const total = await resolve();
   await sleep(350);
   if (hp[1 - turn] <= 0) return finish(turn);
-  $("hint").textContent = total > 0 ? "" : "No " + PETS[turn].color + " match, so no damage!";
+  $("hint").textContent = total > 0 ? "" : "No " + chosen[turn].color + " match, so no damage!";
   if (!hasMoves()) await reshuffle();
   turn = 1 - turn;
   updateTurn();
@@ -278,7 +286,7 @@ board.addEventListener("pointermove", e => {
   if (!drag) return;
   const size = board.clientWidth / N;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-  if (Math.hypot(dx, dy) < size * 0.4) return;
+  if (Math.hypot(dx, dy) < size * 0.3) return;
   const horizontal = Math.abs(dx) > Math.abs(dy);
   const r = drag.t.r + (horizontal ? 0 : Math.sign(dy)), c = drag.t.c + (horizontal ? Math.sign(dx) : 0);
   const t = drag.t;
@@ -288,19 +296,48 @@ board.addEventListener("pointermove", e => {
 window.addEventListener("pointerup", () => { drag = null; });
 
 // ---------- game flow ----------
+function showSelect(step) {
+  gameOver = true; busy = false;
+  updateTurn();
+  $("ov-title").textContent = "P" + (step + 1) + ": choose your pet";
+  $("ov-text").innerHTML = step === 0
+    ? "Your pet's colour is the block colour <b>you</b> need to match to hurt the enemy."
+    : "P1 picked <b>" + chosen[0].name + "</b>. Now P2, pick a different pet.";
+  $("ov-btn").hidden = true;
+  const picks = $("ov-picks");
+  picks.hidden = false;
+  picks.replaceChildren(...PET_LIST.map(p => {
+    const taken = step === 1 && p === chosen[0];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pick" + (taken ? " taken" : "");
+    b.disabled = taken;
+    b.innerHTML = `<div class="pick-art">${petSVG(p)}</div><b>${p.name}</b><span><i style="background:${COLORS[p.color][0]}"></i>${p.color}</span>`;
+    b.addEventListener("click", () => {
+      chosen[step] = p;
+      if (step === 0) showSelect(1); else start();
+    });
+    return b;
+  }));
+  $("overlay").hidden = false;
+}
+
 function finish(winner) {
   gameOver = true;
   busy = false;
   updateTurn();
+  $("ov-picks").hidden = true;
   $("ov-title").textContent = "P" + (winner + 1) + " wins!";
-  $("ov-text").textContent = PETS[winner].name + " is the champion. Play again?";
-  $("ov-btn").textContent = "Play again";
+  $("ov-text").textContent = chosen[winner].name + " is the champion. Play again?";
+  $("ov-btn").textContent = "Choose pets again";
+  $("ov-btn").hidden = false;
   $("overlay").hidden = false;
 }
 
 function start() {
   hp = [MAX_HP, MAX_HP];
   turn = 0; busy = false; gameOver = false;
+  buildPanels();
   newBoard();
   updateHP(); updateTurn();
   $("hint").textContent = "";
@@ -310,7 +347,9 @@ function start() {
 buildPanels();
 updateHP();
 newBoard();
+$("ov-picks").hidden = true;
 $("ov-title").textContent = "Pet Puzzle Battle";
-$("ov-text").innerHTML = "Two players share one screen and take turns.<br>Swap two neighbouring blocks to make a line of 3 or more.<br><b>Only your pet's colour hurts the enemy.</b> Other colours do nothing.<br>Bigger lines and chain reactions hit harder!";
-$("ov-btn").addEventListener("click", start);
-$("btn-restart").addEventListener("click", start);
+$("ov-text").innerHTML = "Two players share one screen and take turns.<br>First, each player picks a pet. Your pet's colour is the block colour you need to match.<br>Swipe a block to swap it with its neighbour and make a line of 3 or more.<br><b>Only your pet's colour hurts the enemy.</b><br>Bigger lines and chain reactions hit harder!";
+$("ov-btn").textContent = "Choose pets";
+$("ov-btn").addEventListener("click", () => showSelect(0));
+$("btn-restart").addEventListener("click", () => showSelect(0));
