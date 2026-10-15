@@ -34,8 +34,9 @@ window.APPS = [
       { t: "Players choose their own pet and colour (5 pets)", done: true },
       { t: "Special blocks (bomb, heal, shield)", done: false },
       { t: "Play against the computer", done: false },
-      { t: "Play online with a friend on another phone", done: false },
-      { t: "Sound effects", done: false }
+      { t: "Sound effects, particles, screen shake and intro animation", done: true },
+      { t: "Online multiplayer: 2 devices with a room code (needs a Firebase project, see plan)", done: false },
+      { t: "Music", done: false }
     ]
   },
   {
@@ -50,9 +51,26 @@ window.APPS = [
       { t: "Shared chain with separate scores", done: true },
       { t: "More levels with different paths", done: false },
       { t: "Power-ups (slow, reverse, bomb)", done: false },
-      { t: "Touch controls for phones", done: false },
-      { t: "Sound effects and music", done: false },
+      { t: "Main menu and a choice of controls (keyboard + mouse, or touch + touch)", done: true },
+      { t: "Touch controls: left half for P1, right half for P2, with a highlighted zone at the start", done: true },
+      { t: "Sound effects, particles, shake, zoom intro and better graphics", done: true },
+      { t: "Online multiplayer: 2 devices with a room code, same game with a Local/Online mode (needs a Firebase project, see plan)", done: false },
+      { t: "Music", done: false },
       { t: "High score list", done: false }
+    ]
+  },
+  {
+    id: "online",
+    title: "Online multiplayer plan",
+    desc: "What we need to play Pet Puzzle Battle and Zuma Duo on two different devices.",
+    link: "online.html",
+    items: [
+      { t: "Write the plan and requirements", done: true },
+      { t: "Create a free Firebase project and send the firebaseConfig", done: false },
+      { t: "Build online Pet Puzzle Battle (room code, shared board seed, send moves)", done: false },
+      { t: "Build online Zuma Duo (host runs the game, guest sends touches)", done: false },
+      { t: "Database rules so only room data can be used", done: false },
+      { t: "Test with two real devices", done: false }
     ]
   }
 ];

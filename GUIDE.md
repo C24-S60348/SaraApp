@@ -34,3 +34,9 @@ Each card on the home page is one app (Tanam Tanam, Pet Puzzle Battle, Zuma Duo)
 ## More games
 - `games/pets/` : Pet Puzzle Battle (2 players, take turns on one screen)
 - `games/zuma/` : Zuma Duo (P1 keyboard on the left, P2 mouse on the right)
+
+## Sound
+All games use `js/sfx.js`, which makes the sounds in code (no audio files). The "Sound" button in each game mutes them.
+
+## Online multiplayer
+See `online.html` (also on the website) for what is needed.

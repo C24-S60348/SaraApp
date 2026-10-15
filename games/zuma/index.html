@@ -9,27 +9,55 @@
 <body>
   <div class="topbar">
     <a class="pill" href="../../index.html">← SaraApp</a>
-    <span class="rotate-note">Best in landscape, on a computer</span>
-    <button class="pill" id="btn-restart" type="button">Restart</button>
+    <span class="rotate-note">Best in landscape</span>
+    <span class="right">
+      <button class="pill" id="btn-sound" type="button"></button>
+      <button class="pill" id="btn-menu" type="button">Menu</button>
+    </span>
   </div>
 
   <div class="stage">
     <canvas id="c" width="1280" height="640"></canvas>
-    <div class="overlay" id="overlay">
+
+    <!-- 1. main menu -->
+    <div class="overlay" id="ov-menu">
       <div class="modal">
-        <h1 id="ov-title">Zuma Duo</h1>
-        <div id="ov-body">
-          <p>Work together. Stop the chain before it reaches the skull!<br>Shoot to make groups of <b>3 or more</b> of the same colour.</p>
-          <div class="controls">
-            <div class="ctl p1"><h3>P1 · Keyboard (left)</h3><p><kbd>←</kbd> <kbd>→</kbd> turn<br><kbd>↑</kbd> shoot<br><kbd>↓</kbd> switch colour</p></div>
-            <div class="ctl p2"><h3>P2 · Mouse (right)</h3><p>Move to aim<br>Left click: shoot<br>Right click: switch colour</p></div>
-          </div>
+        <h1 class="logo">Zuma Duo</h1>
+        <p>Two players, one chain. Work together and stop it before it reaches the skull!</p>
+        <button class="go" id="btn-play" type="button">Play</button>
+      </div>
+    </div>
+
+    <!-- 2. controls -->
+    <div class="overlay" id="ov-mode" hidden>
+      <div class="modal wide">
+        <h2>Choose your controls</h2>
+        <div class="modes">
+          <button class="mode" id="mode-keys" type="button">
+            <b>Keyboard + Mouse</b><em>Best for computer</em>
+            <span>P1 (left): <kbd>←</kbd> <kbd>→</kbd> turn, <kbd>↑</kbd> shoot, <kbd>↓</kbd> switch colour</span>
+            <span>P2 (right): mouse to aim, click to shoot, right click to switch</span>
+          </button>
+          <button class="mode" id="mode-touch" type="button">
+            <b>Touch + Touch</b><em>Best for touch screens</em>
+            <span>P1 touches the <u>left half</u> of the screen</span>
+            <span>P2 touches the <u>right half</u>. Touch to aim and shoot. Tap your frog to switch colour.</span>
+          </button>
         </div>
-        <button class="go" id="ov-btn" type="button">Start</button>
+      </div>
+    </div>
+
+    <!-- 3. game over -->
+    <div class="overlay" id="ov-over" hidden>
+      <div class="modal">
+        <h2 id="over-title"></h2>
+        <p id="over-text"></p>
+        <button class="go" id="btn-again" type="button">Play again</button>
       </div>
     </div>
   </div>
 
+  <script src="../../js/sfx.js"></script>
   <script src="zuma.js"></script>
 </body>
 </html>

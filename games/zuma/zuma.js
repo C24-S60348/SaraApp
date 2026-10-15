@@ -90,38 +90,70 @@ const [bgCanvas, bg] = makeLayer();
   bg.fillStyle = "#111"; [-7, 7].forEach(o => { bg.beginPath(); bg.arc(hx + o, hy - 4, 4.5, 0, 6.28); bg.fill(); });
   bg.fillRect(hx - 1.5, hy + 3, 3, 4);
   // platforms for both players
-  [[150, 320, "P1 · KEYBOARD", "#42a5f5"], [1130, 320, "P2 · MOUSE", "#ef5350"]].forEach(([x, y, label, col]) => {
+  [[150, 320, "P1", "#42a5f5"], [1130, 320, "P2", "#ef5350"]].forEach(([x, y, label, col]) => {
     const pg = bg.createRadialGradient(x, y, 20, x, y, 112);
     pg.addColorStop(0, "#6aa84f"); pg.addColorStop(1, "#3b7a37");
     bg.fillStyle = pg; bg.beginPath(); bg.arc(x, y, 108, 0, 6.28); bg.fill();
     bg.strokeStyle = col; bg.lineWidth = 5; bg.setLineDash([10, 9]); bg.stroke(); bg.setLineDash([]);
-    bg.fillStyle = "rgba(255,255,255,.85)"; bg.font = "bold 15px system-ui,sans-serif"; bg.textAlign = "center";
-    bg.fillText(label, x, y + 148);
   });
 })();
 
 const sprites = COLORS.map(([a, b]) => {
+  // base sprite has a swirl so you can see the ball roll
   const c = document.createElement("canvas"); c.width = c.height = S + 6;
   const x = c.getContext("2d"), m = (S + 6) / 2;
-  const g = x.createRadialGradient(m - 5, m - 6, 2, m, m, R);
-  g.addColorStop(0, "#fff"); g.addColorStop(0.25, a); g.addColorStop(1, b);
+  const g = x.createRadialGradient(m - 4, m - 5, 2, m, m, R);
+  g.addColorStop(0, "#fff"); g.addColorStop(0.3, a); g.addColorStop(1, b);
   x.fillStyle = g; x.beginPath(); x.arc(m, m, R, 0, 6.28); x.fill();
-  x.strokeStyle = "rgba(0,0,0,.35)"; x.lineWidth = 1.5; x.stroke();
-  x.fillStyle = "rgba(255,255,255,.55)"; x.beginPath(); x.ellipse(m - 5, m - 7, 5, 3, -0.6, 0, 6.28); x.fill();
+  x.strokeStyle = "rgba(255,255,255,.38)"; x.lineWidth = 4; x.lineCap = "round";
+  x.beginPath(); x.arc(m, m, R * 0.55, 0.3, 2.3); x.stroke();
+  x.strokeStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.arc(m, m, R * 0.55, 3.4, 5.4); x.stroke();
   return c;
 });
-function drawBall(color, x, y, scale = 1) {
+const gloss = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = S + 6;
+  const x = c.getContext("2d"), m = (S + 6) / 2;
+  const g = x.createRadialGradient(m, m, R * 0.6, m, m, R);
+  g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.35)");
+  x.fillStyle = g; x.beginPath(); x.arc(m, m, R, 0, 6.28); x.fill();
+  x.strokeStyle = "rgba(0,0,0,.4)"; x.lineWidth = 1.5; x.beginPath(); x.arc(m, m, R, 0, 6.28); x.stroke();
+  x.fillStyle = "rgba(255,255,255,.7)"; x.beginPath(); x.ellipse(m - 5, m - 7, 5.5, 3.2, -0.6, 0, 6.28); x.fill();
+  x.fillStyle = "rgba(255,255,255,.25)"; x.beginPath(); x.ellipse(m + 5, m + 7, 3, 1.6, -0.6, 0, 6.28); x.fill();
+  return c;
+})();
+function drawBall(color, x, y, scale = 1, rot = 0, shadow = false) {
   const s = sprites[color], w = s.width * scale;
-  ctx.drawImage(s, x - w / 2, y - w / 2, w, w);
+  if (shadow) { ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(x + 3, y + 5, R * scale * 0.95, R * scale * 0.8, 0, 0, 6.28); ctx.fill(); }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.drawImage(s, -w / 2, -w / 2, w, w);
+  ctx.restore();
+  ctx.drawImage(gloss, x - w / 2, y - w / 2, w, w);
 }
 
 // ---------- game state ----------
+// screens: menu -> mode -> intro -> play -> over
 let chain, headD, spawned, projectiles, shooters, join, combo, state, bursts, time;
+let mode = "keys";          // "keys" = keyboard + mouse, "touch" = touch + touch
+let introT = 0, zoneT = 0, goT = 0, shake = 0, danger = 0, dangerBeep = 0, comboBanner = null;
+let particles = [], texts = [], joinOwner = null;
+const leaves = Array.from({ length: 26 }, () => ({ x: Math.random() * W, y: Math.random() * H, s: 4 + Math.random() * 7, v: 8 + Math.random() * 18, p: Math.random() * 6.28 }));
 const keys = {};
 const mouse = { x: 900, y: 320 };
+const touches = new Map(); // pointerId -> shooter (touch mode)
+
+const $ = id => document.getElementById(id);
 
 function newShooter(x, y, ang, tint, name) {
-  return { x, y, ang, tint, name, cur: 0, next: 0, cool: 0, score: 0 };
+  return { x, y, ang, tint, name, cur: 0, next: 0, cool: 0, score: 0, recoil: 0, flash: 0, hold: false };
+}
+function resetShooters() {
+  shooters = [newShooter(150, 320, 0, "#42a5f5", "P1"), newShooter(1130, 320, Math.PI, "#ef5350", "P2")];
+  shooters.forEach(s => { s.cur = Math.floor(Math.random() * COLORS.length); s.next = Math.floor(Math.random() * COLORS.length); });
+}
+function resetGame() {
+  chain = []; headD = 0; spawned = 0; projectiles = []; join = null; combo = 0; bursts = []; time = 0;
+  particles = []; texts = []; comboBanner = null; shake = 0; danger = 0; touches.clear();
+  resetShooters();
 }
 function chainColors() {
   const set = [...new Set(chain.map(b => b.color))];
@@ -129,12 +161,16 @@ function chainColors() {
 }
 function pickColor() { const c = chainColors(); return c[Math.floor(Math.random() * c.length)]; }
 
-function start() {
-  chain = []; headD = 0; spawned = 0; projectiles = []; join = null; combo = 0; bursts = []; time = 0;
-  shooters = [newShooter(150, 320, 0, "#42a5f5", "P1"), newShooter(1130, 320, Math.PI, "#ef5350", "P2")];
-  shooters.forEach(s => { s.cur = Math.floor(Math.random() * COLORS.length); s.next = Math.floor(Math.random() * COLORS.length); });
-  state = "play";
-  document.getElementById("overlay").hidden = true;
+function show(id) {
+  ["ov-menu", "ov-mode", "ov-over"].forEach(o => { $(o).hidden = o !== id; });
+}
+function toMenu() { resetGame(); state = "menu"; show("ov-menu"); }
+function startGame(m) {
+  mode = m;
+  resetGame();
+  state = "intro"; introT = 0; goT = 0; zoneT = 0;
+  show(null);
+  SFX.play("intro");
 }
 
 function spawnBalls() {
@@ -153,13 +189,14 @@ function shoot(s) {
   if (state !== "play" || s.cool > 0) return;
   const speed = 980, muzzle = 52;
   projectiles.push({ x: s.x + Math.cos(s.ang) * muzzle, y: s.y + Math.sin(s.ang) * muzzle, vx: Math.cos(s.ang) * speed, vy: Math.sin(s.ang) * speed, color: s.cur, owner: s });
-  s.cur = s.next; s.next = pickColor(); s.cool = 0.28;
+  s.cur = s.next; s.next = pickColor(); s.cool = 0.26; s.recoil = 1; s.flash = 1;
+  SFX.play("shoot");
 }
-function swap(s) { if (state === "play") [s.cur, s.next] = [s.next, s.cur]; }
+function swapColors(s) { if (state === "play") { [s.cur, s.next] = [s.next, s.cur]; SFX.play("swapColor"); } }
 
 window.addEventListener("keydown", e => {
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault();
-  if (e.key === "ArrowDown" && !keys.ArrowDown && shooters) swap(shooters[0]);
+  if (e.key === "ArrowDown" && !keys.ArrowDown && mode === "keys" && shooters) swapColors(shooters[0]);
   keys[e.key] = true;
 });
 window.addEventListener("keyup", e => { keys[e.key] = false; });
@@ -169,14 +206,35 @@ function toCanvas(e) {
   const r = canvas.getBoundingClientRect();
   return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
 }
-canvas.addEventListener("pointermove", e => { [mouse.x, mouse.y] = toCanvas(e); });
-canvas.addEventListener("pointerdown", e => {
-  [mouse.x, mouse.y] = toCanvas(e);
-  if (!shooters) return;
-  const s = shooters[1];
-  if (e.button === 2 || Math.hypot(mouse.x - s.x, mouse.y - s.y) < 34) swap(s);
-  else if (e.button === 0) { s.ang = Math.atan2(mouse.y - s.y, mouse.x - s.x); shoot(s); }
+canvas.addEventListener("pointermove", e => {
+  const [x, y] = toCanvas(e);
+  if (mode === "keys") { mouse.x = x; mouse.y = y; return; }
+  const s = touches.get(e.pointerId);
+  if (s) s.ang = Math.atan2(y - s.y, x - s.x);
 });
+canvas.addEventListener("pointerdown", e => {
+  if (state !== "play") return;
+  const [x, y] = toCanvas(e);
+  if (mode === "keys") {
+    mouse.x = x; mouse.y = y;
+    const s = shooters[1];
+    if (e.button === 2 || Math.hypot(x - s.x, y - s.y) < 34) swapColors(s);
+    else if (e.button === 0) { s.ang = Math.atan2(y - s.y, x - s.x); s.hold = true; shoot(s); }
+    return;
+  }
+  const s = shooters[x < W / 2 ? 0 : 1];
+  if (Math.hypot(x - s.x, y - s.y) < 46) { swapColors(s); return; }
+  canvas.setPointerCapture(e.pointerId);
+  touches.set(e.pointerId, s);
+  s.ang = Math.atan2(y - s.y, x - s.x); s.hold = true; shoot(s);
+});
+const release = e => {
+  const s = touches.get(e.pointerId);
+  if (s) { s.hold = false; touches.delete(e.pointerId); }
+  if (mode === "keys" && shooters) shooters[1].hold = false;
+};
+canvas.addEventListener("pointerup", release);
+canvas.addEventListener("pointercancel", release);
 canvas.addEventListener("contextmenu", e => e.preventDefault());
 
 // ---------- chain logic ----------
@@ -187,19 +245,35 @@ function runAround(i) {
   while (b < chain.length - 1 && chain[b + 1].color === c) b++;
   return [a, b];
 }
+
+function sparks(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.28, v = 80 + Math.random() * 240;
+    particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0, max: 0.45 + Math.random() * 0.4, color, size: 2 + Math.random() * 3.5 });
+  }
+}
+
 function removeRange(a, b, owner) {
   const count = b - a + 1;
+  let cx = 0, cy = 0;
   for (let i = a; i <= b; i++) {
-    const p = posAt(chain[i].d);
-    bursts.push({ x: p[0] + chain[i].ox, y: p[1] + chain[i].oy, color: chain[i].color, t: 0 });
+    const p = posAt(chain[i].d), x = p[0] + chain[i].ox, y = p[1] + chain[i].oy;
+    bursts.push({ x, y, color: chain[i].color, t: 0 });
+    sparks(x, y, COLORS[chain[i].color][0], 9);
+    cx += x / count; cy += y / count;
   }
-  owner.score += count * 10 * (1 + combo);
+  const gained = count * 10 * (1 + combo);
+  owner.score += gained;
+  texts.push({ x: cx, y: cy - 10, text: "+" + gained, t: 0, color: owner.tint === "#42a5f5" ? "#bbdefb" : "#ffcdd2" });
+  SFX.play("pop", combo + (count > 3 ? 2 : 0));
+  if (count >= 4 || combo > 0) SFX.play("combo", combo);
+  if (combo > 0) comboBanner = { text: "COMBO x" + (combo + 1) + "!", t: 0 };
+  shake = Math.max(shake, 3 + count * 1.2 + combo * 4);
   chain.splice(a, count);
   if (a === 0) headD -= count * S;
   join = a > 0 && a < chain.length ? a : null;
   joinOwner = owner;
 }
-let joinOwner = null;
 
 function insertShot(p, hitIdx) {
   const ball = chain[hitIdx], bp = posAt(ball.d), t = tangentAt(ball.d);
@@ -208,21 +282,27 @@ function insertShot(p, hitIdx) {
   const target = headD - idx * S, tp = posAt(target);
   chain.splice(idx, 0, { color: p.color, d: target, ox: p.x - tp[0], oy: p.y - tp[1] });
   join = null; combo = 0;
+  SFX.play("thud");
+  sparks(p.x, p.y, "#fff", 4);
   const [a, b] = runAround(idx);
   if (b - a + 1 >= 3) removeRange(a, b, p.owner);
 }
 
-function update(dt) {
-  time += dt;
-  const [p1, p2] = shooters;
-  if (keys.ArrowLeft) p1.ang -= 2.7 * dt;
-  if (keys.ArrowRight) p1.ang += 2.7 * dt;
-  if (keys.ArrowUp) shoot(p1);
-  p2.ang = Math.atan2(mouse.y - p2.y, mouse.x - p2.x);
-  shooters.forEach(s => { s.cool = Math.max(0, s.cool - dt); });
+function updateEffects(dt) {
+  particles.forEach(p => { p.life += dt; p.vy += 420 * dt; p.x += p.vx * dt; p.y += p.vy * dt; });
+  particles = particles.filter(p => p.life < p.max);
+  texts.forEach(t => { t.t += dt; });
+  texts = texts.filter(t => t.t < 1);
+  bursts.forEach(b => { b.t += dt; });
+  bursts = bursts.filter(b => b.t < 0.35);
+  if (comboBanner) { comboBanner.t += dt; if (comboBanner.t > 1.1) comboBanner = null; }
+  shake *= Math.exp(-7 * dt);
+  leaves.forEach(l => { l.y += l.v * dt; l.x += Math.sin(time * 0.6 + l.p) * 12 * dt; l.p += dt; if (l.y > H + 20) { l.y = -20; l.x = Math.random() * W; } });
+  shooters.forEach(s => { s.recoil = Math.max(0, s.recoil - dt * 6); s.flash = Math.max(0, s.flash - dt * 7); });
+}
 
-  // chain moves
-  headD += (spawned < 14 ? RUSH_SPEED : BASE_SPEED) * dt;
+function moveChain(dt, speed) {
+  headD += speed * dt;
   spawnBalls();
   chain.forEach((b, i) => {
     const target = headD - i * S;
@@ -230,6 +310,20 @@ function update(dt) {
     else if (b.d > target) b.d = Math.max(target, b.d - BACK_SPEED * dt);
     const k = Math.exp(-14 * dt); b.ox *= k; b.oy *= k;
   });
+}
+
+function update(dt) {
+  time += dt;
+  const [p1, p2] = shooters;
+  if (mode === "keys") {
+    if (keys.ArrowLeft) p1.ang -= 2.7 * dt;
+    if (keys.ArrowRight) p1.ang += 2.7 * dt;
+    if (keys.ArrowUp) shoot(p1);
+    p2.ang = Math.atan2(mouse.y - p2.y, mouse.x - p2.x);
+  }
+  shooters.forEach(s => { s.cool = Math.max(0, s.cool - dt); if (s.hold) shoot(s); });
+
+  moveChain(dt, spawned < 14 ? RUSH_SPEED : BASE_SPEED);
 
   // gap closed? check for a new match where the two halves meet
   if (join !== null) {
@@ -255,69 +349,132 @@ function update(dt) {
     });
     if (hit >= 0) { projectiles.splice(k, 1); insertShot(p, hit); }
   }
-  bursts.forEach(b => { b.t += dt; });
-  bursts = bursts.filter(b => b.t < 0.35);
 
-  // win / lose
+  // danger glow near the skull
+  danger = chain.length ? Math.max(0, Math.min(1, 1 - (PATH_LEN - chain[0].d) / 280)) : 0;
+  dangerBeep -= dt;
+  if (danger > 0.45 && dangerBeep <= 0) { SFX.play("danger"); dangerBeep = 0.65 - danger * 0.3; shake = Math.max(shake, 1.5); }
+
   if (chain.length && chain[0].d >= PATH_LEN - R) endGame(false);
   else if (spawned >= TOTAL_BALLS && !chain.length) endGame(true);
 }
 
 function endGame(win) {
   state = "over";
+  shake = win ? 6 : 16;
+  SFX.play(win ? "win" : "lose");
+  for (let i = 0; i < 70; i++) sparks(W / 2 + (Math.random() - .5) * 600, H / 2 + (Math.random() - .5) * 300, win ? COLORS[i % 5][0] : "#ff8a80", 1);
   const [a, b] = shooters.map(s => s.score);
-  document.getElementById("ov-title").textContent = win ? "You cleared the chain!" : "The chain reached the skull!";
+  $("over-title").textContent = win ? "You cleared the chain!" : "The chain reached the skull!";
   const lead = a === b ? "It is a tie." : (a > b ? "P1 scored more." : "P2 scored more.");
-  document.getElementById("ov-body").innerHTML = `<p>${win ? "Great teamwork!" : "Try again together."}</p><p><b style="color:#90caf9">P1: ${a}</b> &nbsp;·&nbsp; <b style="color:#ef9a9a">P2: ${b}</b><br>Team total: ${a + b}<br>${lead}</p>`;
-  document.getElementById("ov-btn").textContent = "Play again";
-  document.getElementById("overlay").hidden = false;
+  $("over-text").innerHTML = `${win ? "Great teamwork!" : "Try again together."}<br><b style="color:#90caf9">P1: ${a}</b> &nbsp;·&nbsp; <b style="color:#ef9a9a">P2: ${b}</b><br>Team total: ${a + b}<br>${lead}`;
+  setTimeout(() => { if (state === "over") show("ov-over"); }, 700);
 }
 
 // ---------- drawing ----------
-function drawShooter(s, index) {
+function drawShooter(s) {
   ctx.save(); ctx.translate(s.x, s.y);
-  // aim guide
+  const back = s.recoil * 8;
   ctx.save(); ctx.rotate(s.ang);
   ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 3; ctx.setLineDash([2, 12]); ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(60, 0); ctx.lineTo(420, 0); ctx.stroke(); ctx.setLineDash([]);
-  // cannon
-  ctx.fillStyle = "#37474f"; ctx.fillRect(10, -13, 46, 26);
-  ctx.fillStyle = s.tint; ctx.fillRect(10, -13, 46, 7);
-  ctx.beginPath(); ctx.moveTo(56, -16); ctx.lineTo(62, -16); ctx.lineTo(62, 16); ctx.lineTo(56, 16); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(66, 0); ctx.lineTo(420, 0); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "#37474f"; ctx.fillRect(10 - back, -13, 46, 26);
+  ctx.fillStyle = s.tint; ctx.fillRect(10 - back, -13, 46, 7);
+  ctx.fillStyle = "#263238"; ctx.fillRect(54 - back, -16, 8, 32);
+  if (s.flash > 0) {
+    const g = ctx.createRadialGradient(70, 0, 2, 70, 0, 34);
+    g.addColorStop(0, `rgba(255,255,255,${s.flash})`); g.addColorStop(0.4, `rgba(255,224,102,${s.flash * 0.7})`); g.addColorStop(1, "rgba(255,224,102,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(70, 0, 34, 0, 6.28); ctx.fill();
+  }
   ctx.restore();
   // body
   const bg2 = ctx.createRadialGradient(-8, -10, 4, 0, 0, 40);
   bg2.addColorStop(0, "#fff"); bg2.addColorStop(0.25, s.tint); bg2.addColorStop(1, "#1b2a33");
   ctx.fillStyle = bg2; ctx.beginPath(); ctx.arc(0, 0, 38, 0, 6.28); ctx.fill();
   ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 3; ctx.stroke();
-  // loaded + next ball
-  ctx.save(); ctx.rotate(s.ang);
-  drawBall(s.cur, 62 + 4, 0, 0.9);
-  ctx.restore();
-  drawBall(s.cur, 0, 0, 1);
-  const nx = -Math.cos(s.ang) * 50, ny = -Math.sin(s.ang) * 50;
+  // frog eyes that follow the aim
+  [-15, 15].forEach(ex => {
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ex, -27, 8, 0, 6.28); ctx.fill();
+    ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(ex + Math.cos(s.ang) * 3, -27 + Math.sin(s.ang) * 3, 4, 0, 6.28); ctx.fill();
+  });
+  drawBall(s.cur, 0, 4, 1);
+  const nx = -Math.cos(s.ang) * 54, ny = -Math.sin(s.ang) * 54;
   ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.arc(nx, ny, 15, 0, 6.28); ctx.fill();
   drawBall(s.next, nx, ny, 0.7);
   ctx.restore();
 }
 
-function draw() {
+function drawWorld() {
   ctx.drawImage(bgCanvas, 0, 0);
-  // chain (draw from tail to head so the head overlaps)
+  // drifting leaves
+  ctx.fillStyle = "rgba(200,255,200,.14)";
+  leaves.forEach(l => { ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.p); ctx.beginPath(); ctx.ellipse(0, 0, l.s, l.s * 0.45, 0, 0, 6.28); ctx.fill(); ctx.restore(); });
+
+  // skull hole glow when the chain is close
+  const [hx, hy] = pts[pts.length - 1];
+  if (danger > 0) {
+    const pulse = 0.5 + 0.5 * Math.sin(ptime * 9);
+    const g = ctx.createRadialGradient(hx, hy, 20, hx, hy, 130);
+    g.addColorStop(0, `rgba(255,40,40,${0.55 * danger * (0.6 + pulse * 0.4)})`); g.addColorStop(1, "rgba(255,40,40,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, 130, 0, 6.28); ctx.fill();
+  }
+
+  // chain: shadows first, then balls from tail to head
+  chain.forEach(b => { const p = posAt(b.d); ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(p[0] + b.ox + 3, p[1] + b.oy + 5, R * 0.95, R * 0.8, 0, 0, 6.28); ctx.fill(); });
   for (let i = chain.length - 1; i >= 0; i--) {
     const b = chain[i], p = posAt(b.d);
-    drawBall(b.color, p[0] + b.ox, p[1] + b.oy);
+    drawBall(b.color, p[0] + b.ox, p[1] + b.oy, 1, b.d / R);
   }
-  projectiles.forEach(p => drawBall(p.color, p.x, p.y));
+  projectiles.forEach(p => {
+    ctx.strokeStyle = COLORS[p.color][0]; ctx.globalAlpha = 0.35; ctx.lineWidth = R * 1.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035); ctx.stroke(); ctx.globalAlpha = 1;
+    drawBall(p.color, p.x, p.y, 1, ptime * 10, true);
+  });
   bursts.forEach(b => {
     const f = b.t / 0.35;
     ctx.strokeStyle = `rgba(255,255,255,${1 - f})`; ctx.lineWidth = 4 * (1 - f) + 1;
-    ctx.beginPath(); ctx.arc(b.x, b.y, R + f * 22, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(b.x, b.y, R + f * 26, 0, 6.28); ctx.stroke();
     drawBall(b.color, b.x, b.y, 1 - f);
   });
   shooters.forEach(drawShooter);
+  particles.forEach(p => {
+    const a = 1 - p.life / p.max;
+    ctx.globalAlpha = a; ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.4 + a * 0.6), 0, 6.28); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  texts.forEach(t => {
+    ctx.globalAlpha = 1 - t.t; ctx.font = "bold 24px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = t.color;
+    ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 4; ctx.strokeText(t.text, t.x, t.y - t.t * 40); ctx.fillText(t.text, t.x, t.y - t.t * 40);
+  });
+  ctx.globalAlpha = 1;
+}
 
-  // HUD
+function bigText(text, scale, alpha, color = "#fff") {
+  ctx.save(); ctx.translate(W / 2, H / 2 - 10); ctx.scale(scale, scale); ctx.globalAlpha = alpha;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "900 88px system-ui,sans-serif";
+  ctx.lineWidth = 12; ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.strokeText(text, 0, 0);
+  ctx.fillStyle = color; ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
+
+function drawZones(alpha) {
+  const dot = (x, w, col, label) => {
+    ctx.fillStyle = col.replace("1)", ".16)"); ctx.fillRect(x, 0, w, H);
+    ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.setLineDash([14, 12]);
+    ctx.strokeRect(x + 14, 14, w - 28, H - 28); ctx.setLineDash([]);
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "800 34px system-ui,sans-serif"; ctx.fillText(label, x + w / 2, H * 0.2);
+    ctx.font = "20px system-ui,sans-serif"; ctx.fillText("Touch here to aim and shoot", x + w / 2, H * 0.2 + 40);
+    ctx.fillText("Tap your frog to switch colour", x + w / 2, H * 0.2 + 68);
+  };
+  ctx.save(); ctx.globalAlpha = alpha;
+  dot(0, W / 2, "rgba(66,165,245,1)", "P1 · LEFT SIDE");
+  dot(W / 2, W / 2, "rgba(239,83,80,1)", "P2 · RIGHT SIDE");
+  ctx.restore();
+}
+
+function drawHud() {
   ctx.textBaseline = "middle";
   const [a, b] = shooters;
   ctx.font = "bold 24px system-ui,sans-serif";
@@ -328,26 +485,68 @@ function draw() {
   const left = TOTAL_BALLS - spawned + chain.length;
   ctx.font = "14px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.8)";
   ctx.fillText(left + " balls left", W / 2, H - 18);
-  if (combo > 0) { ctx.font = "bold 22px system-ui,sans-serif"; ctx.fillStyle = "#ffe082"; ctx.fillText("Combo x" + (combo + 1) + "!", W / 2, H - 70); }
   ctx.font = "13px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.7)";
-  ctx.textAlign = "left"; ctx.fillText("← → turn · ↑ shoot · ↓ switch", 24, H - 18);
-  ctx.textAlign = "right"; ctx.fillText("mouse aim · click shoot · right click switch", W - 24, H - 18);
+  ctx.textAlign = "left"; ctx.fillText(mode === "keys" ? "← → turn · ↑ shoot · ↓ switch" : "Touch the left side", 24, H - 18);
+  ctx.textAlign = "right"; ctx.fillText(mode === "keys" ? "mouse aim · click shoot · right click switch" : "Touch the right side", W - 24, H - 18);
+  ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,.85)";
+  ctx.fillText(mode === "keys" ? "P1 · KEYBOARD" : "P1 · TOUCH", 150, 468);
+  ctx.fillText(mode === "keys" ? "P2 · MOUSE" : "P2 · TOUCH", 1130, 468);
+  if (comboBanner) {
+    const t = comboBanner.t, sc = t < 0.2 ? 0.6 + t * 2 : 1;
+    ctx.save(); ctx.translate(W / 2, 100); ctx.scale(sc, sc); ctx.globalAlpha = Math.min(1, (1.1 - t) * 3);
+    ctx.font = "900 44px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 8; ctx.strokeStyle = "rgba(0,0,0,.5)";
+    ctx.strokeText(comboBanner.text, 0, 0); ctx.fillStyle = "#ffe082"; ctx.fillText(comboBanner.text, 0, 0); ctx.restore();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  let zoom = 1;
+  if (state === "intro") { const f = Math.min(1, introT / 1.5); zoom = 1 + 0.4 * Math.pow(1 - f, 3); }
+  ctx.save();
+  const sx = (Math.random() - 0.5) * shake, sy = (Math.random() - 0.5) * shake;
+  ctx.translate(W / 2 + sx, H / 2 + sy); ctx.scale(zoom, zoom); ctx.translate(-W / 2, -H / 2);
+  drawWorld();
+  ctx.restore();
+
+  if (state === "play" || state === "intro" || state === "over") drawHud();
+  if (state === "intro") {
+    if (introT < 1.1) bigText("READY?", 0.7 + Math.min(1, introT * 3) * 0.3, Math.min(1, (1.1 - introT) * 4));
+    else bigText("GO!", 1 + (introT - 1.1) * 0.5, Math.min(1, (1.7 - introT) * 3), "#ffe066");
+  } else if (state === "play" && goT < 0.5) bigText("GO!", 1.3 + goT * 0.5, 1 - goT * 2, "#ffe066");
+  if (mode === "touch" && (state === "intro" || state === "play") && zoneT < 3.4) drawZones(Math.min(1, (3.4 - zoneT) * 1.2, zoneT * 3 + 0.2));
 }
 
 // ---------- loop ----------
-let lastT = performance.now();
+let lastT = performance.now(), ptime = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000);
-  lastT = now;
-  if (state === "play") update(dt);
+  lastT = now; ptime += dt;
+  if (state === "intro") {
+    introT += dt; zoneT += dt;
+    updateEffects(dt);
+    if (introT >= 1.7) { state = "play"; goT = 0.0001; shake = 9; SFX.play("go"); }
+  } else if (state === "play") {
+    zoneT += dt; if (goT) goT += dt;
+    update(dt); updateEffects(dt);
+  } else if (state === "over") {
+    updateEffects(dt);
+  } else { // menu / mode: a calm decorative chain
+    time += dt;
+    if (!chain.length || chain[0].d > PATH_LEN * 0.6) { chain = []; headD = 0; spawned = 0; }
+    moveChain(dt, 70);
+    updateEffects(dt);
+  }
   draw();
   requestAnimationFrame(frame);
 }
 
-shooters = [newShooter(150, 320, 0, "#42a5f5", "P1"), newShooter(1130, 320, Math.PI, "#ef5350", "P2")];
-chain = []; projectiles = []; bursts = []; headD = 0; spawned = 0; combo = 0; join = null; state = "menu"; time = 0;
-document.getElementById("ov-btn").addEventListener("click", () => {
-  if (state === "over") location.reload(); else start();
-});
-document.getElementById("btn-restart").addEventListener("click", () => location.reload());
+resetGame();
+state = "menu";
+$("btn-play").addEventListener("click", () => { SFX.play("click"); state = "mode"; show("ov-mode"); });
+$("mode-keys").addEventListener("click", () => startGame("keys"));
+$("mode-touch").addEventListener("click", () => startGame("touch"));
+$("btn-again").addEventListener("click", () => startGame(mode));
+$("btn-menu").addEventListener("click", () => { SFX.play("click"); toMenu(); });
+SFX.bindButton($("btn-sound"));
 requestAnimationFrame(frame);

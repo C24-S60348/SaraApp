@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Online multiplayer plan · SaraApp</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="index.html">SaraApp</a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="games/tanam/index.html">Tanam Tanam</a>
+      <a href="games/pets/index.html">Pet Battle</a>
+      <a href="games/zuma/index.html">Zuma Duo</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Online multiplayer: what we need</h1>
+    <p>Right now both games are <b>local</b>: two people share one screen. Online means two people on <b>two different devices</b>.</p>
+
+    <h2>The one big thing to know</h2>
+    <p>GitHub Pages only hosts files. It cannot run a game server. So for online play, the two browsers need a free “messenger” service in the middle. We do not need to rent or run a server ourselves.</p>
+
+    <h2>Options</h2>
+    <ul>
+      <li><b>Firebase Realtime Database (Google).</b> Free plan, no server, easy. Good for the turn-based Pet Puzzle, and fine for Zuma Duo too. <b>Needs a Google account.</b></li>
+      <li><b>PeerJS / WebRTC.</b> The two phones talk directly. No account, free, very low delay. Best for fast Zuma. Can fail on some strict mobile networks.</li>
+      <li><b>Our own server</b> (Node.js on Render or Fly). Most control, but more to maintain and the free tier goes to sleep. Not needed for now.</li>
+    </ul>
+
+    <h2>My recommendation</h2>
+    <ul>
+      <li><b>One game, two modes</b> (not two separate games). Keep one folder per game and add a menu choice: <i>Local</i> or <i>Online</i>. The rules stay the same, and every bug fix helps both. On the home page we can still show two cards, “Zuma Duo” and “Zuma Duo Online”, that open the same game with a different mode. Only split them into separate games if they become very different.</li>
+      <li><b>Start with Pet Puzzle Battle.</b> It is turn-based, so we only send each move (“swap tile A with tile B”). Both devices share one random seed so the boards match. Small, cheap and reliable.</li>
+      <li><b>Then Zuma Duo.</b> Player 1’s device runs the game. Player 2 sends only touches or aim, and receives the game picture data about 20–30 times a second. Using the same Firebase keeps setup simple. If it feels laggy we can switch to PeerJS.</li>
+      <li><b>Joining:</b> one player creates a room and gets a 4-letter code. The friend types the code to join.</li>
+    </ul>
+
+    <h2>What you need to bring</h2>
+    <ol>
+      <li>A free <b>Google account</b> (you can use the one you already have).</li>
+      <li>Go to <b>console.firebase.google.com</b> and create a project (free “Spark” plan, no credit card). Name it anything, for example “saraapp”. You can turn Google Analytics off.</li>
+      <li>Inside the project, add a <b>Web app</b> (the &lt;/&gt; icon). Firebase then shows a block called <code>firebaseConfig</code>.</li>
+      <li>Open <b>Build → Realtime Database → Create database</b>. Pick the region nearest to you.</li>
+      <li><b>Send me the firebaseConfig block.</b> It is <i>not</i> a password. It is meant to be public, so it is safe to put in the website. Never send me your Google password.</li>
+      <li>I will give you short database “rules” to paste into the Rules tab so only room data can be used.</li>
+      <li>Two devices (for example your phone and a laptop) to test with.</li>
+    </ol>
+
+    <h2>Good to know</h2>
+    <ul>
+      <li>The free plan allows about 100 people connected at the same time. That is plenty for you and your friends.</li>
+      <li>Anyone technical could cheat with browser tools. For a game with friends this is fine.</li>
+      <li>No user accounts or names are needed at the start. Players are anonymous with a room code.</li>
+      <li>Later ideas: names and avatars, a rematch button, and quick-match with a stranger.</li>
+    </ul>
+  </main>
+  <footer>Built with HTML, CSS and JavaScript</footer>
+</body>
+</html>

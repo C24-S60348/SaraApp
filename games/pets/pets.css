@@ -69,3 +69,19 @@ body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--in
 .pick-art svg { display:block; width:100%; height:auto; }
 .pick span { display:flex; align-items:center; gap:.3rem; font-size:.8rem; color:#d9d3ff; }
 .pick i { width:12px; height:12px; border-radius:4px; display:inline-block; }
+
+.right { display:flex; gap:.5rem; }
+#fx { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
+.spark { position:absolute; left:50%; top:45%; width:10px; height:10px; border-radius:50%; pointer-events:none; animation:spark .65s ease-out forwards; }
+@keyframes spark { to { transform:translate(var(--dx),var(--dy)) scale(.2); opacity:0; } }
+.arena.intro { animation:zoomin 1s cubic-bezier(.2,.9,.3,1); }
+@keyframes zoomin { from { transform:scale(1.25); opacity:.2; } to { transform:scale(1); opacity:1; } }
+.arena.shake1 { animation:sh1 .3s; } .arena.shake2 { animation:sh2 .45s; } .arena.shake3 { animation:sh3 .7s; }
+@keyframes sh1 { 0%,100% { transform:translate(0); } 25% { transform:translate(-4px,2px); } 50% { transform:translate(4px,-2px); } 75% { transform:translate(-2px,2px); } }
+@keyframes sh2 { 0%,100% { transform:translate(0); } 15% { transform:translate(-9px,4px); } 30% { transform:translate(9px,-5px); } 45% { transform:translate(-7px,5px); } 60% { transform:translate(6px,-3px); } 80% { transform:translate(-3px,2px); } }
+@keyframes sh3 { 0%,100% { transform:translate(0) rotate(0); } 10% { transform:translate(-14px,7px) rotate(-.6deg); } 25% { transform:translate(14px,-8px) rotate(.6deg); } 40% { transform:translate(-11px,8px) rotate(-.4deg); } 55% { transform:translate(10px,-6px) rotate(.4deg); } 75% { transform:translate(-5px,3px); } }
+.board-wrap { position:relative; }
+.banner { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); font-weight:900; font-size:clamp(2rem,9vw,4rem); color:#ffe066; text-shadow:0 4px 0 #b71c1c,0 0 24px rgba(0,0,0,.7); pointer-events:none; z-index:5; white-space:nowrap; }
+.banner[hidden] { display:none; }
+.banner.show { animation:bn 1s ease-out forwards; }
+@keyframes bn { 0% { transform:translate(-50%,-50%) scale(.3); opacity:0; } 25% { transform:translate(-50%,-50%) scale(1.25); opacity:1; } 45% { transform:translate(-50%,-50%) scale(1); } 85% { opacity:1; } 100% { transform:translate(-50%,-70%) scale(1); opacity:0; } }
