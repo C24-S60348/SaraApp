@@ -28,7 +28,15 @@
       </div>
     </div>
 
-    <!-- 2. controls -->
+    <!-- 2. choose a level -->
+    <div class="overlay" id="ov-level" hidden>
+      <div class="modal wide">
+        <h2>Choose a level</h2>
+        <div class="levels" id="levels"></div>
+      </div>
+    </div>
+
+    <!-- 3. controls -->
     <div class="overlay" id="ov-mode" hidden>
       <div class="modal wide">
         <h2>Choose your controls</h2>
@@ -40,19 +48,19 @@
           </button>
           <button class="mode" id="mode-touch" type="button">
             <b>Touch + Touch</b><em>Best for touch screens</em>
-            <span>P1 touches the <u>left half</u> of the screen</span>
-            <span>P2 touches the <u>right half</u>. Touch to aim and shoot. Tap your frog to switch colour.</span>
+            <span>P1 uses the <u>left half</u> of the screen, P2 the <u>right half</u>.</span>
+            <span><b>Hold</b> to aim, <b>release</b> to shoot. Tap your frog to switch colour.</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 3. game over -->
+    <!-- 4. game over -->
     <div class="overlay" id="ov-over" hidden>
       <div class="modal">
         <h2 id="over-title"></h2>
         <p id="over-text"></p>
-        <button class="go" id="btn-again" type="button">Play again</button>
+        <div class="btns"><button class="go" id="btn-again" type="button">Play again</button><button class="go alt" id="btn-next" type="button" hidden>Next level</button><button class="go alt" id="btn-levels" type="button">Levels</button></div>
       </div>
     </div>
   </div>

@@ -2,29 +2,95 @@ const W = 1280, H = 640, R = 17, S = R * 2;
 const COLORS = [
   ["#ff8a80", "#c62828"], ["#82b1ff", "#1565c0"], ["#a5e8a0", "#2e7d32"], ["#fff59d", "#f9a825"], ["#ce93d8", "#6a1b9a"]
 ];
-const TOTAL_BALLS = 80;
-const BASE_SPEED = 26, RUSH_SPEED = 190, CLOSE_SPEED = 560, BACK_SPEED = 900;
+let TOTAL_BALLS = 80, baseSpeed = 26;
+const RUSH_SPEED = 190, CLOSE_SPEED = 560, BACK_SPEED = 900;
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-// ---------- the curvy path ----------
-const WAY = [[620, -50], [620, 70], [850, 105], [905, 250], [700, 318], [425, 268], [335, 395], [520, 495], [750, 478], [815, 365], [655, 385]];
-const pts = [], cum = [];
-(function buildPath() {
-  const P = [WAY[0], ...WAY, WAY[WAY.length - 1]];
+// ---------- level paths ----------
+function catmull(way) {
+  const out = [], P = [way[0], ...way, way[way.length - 1]];
   for (let i = 1; i < P.length - 2; i++) {
     const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
     for (let k = 0; k < 48; k++) {
       const t = k / 48, t2 = t * t, t3 = t2 * t;
-      pts.push([0, 1].map(j => 0.5 * ((2 * p1[j]) + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)));
+      out.push([0, 1].map(j => 0.5 * ((2 * p1[j]) + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)));
     }
   }
-  pts.push(WAY[WAY.length - 1]);
-  cum.push(0);
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-})();
-const PATH_LEN = cum[cum.length - 1];
+  out.push(way[way.length - 1]);
+  return out;
+}
+
+function spiralWay() {
+  const out = [[640, -50]], turns = 2.3, r0 = 265, r1 = 66, steps = Math.round(turns * 6.283 / 0.05);
+  for (let i = 0; i <= steps; i++) {
+    const f = i / steps, th = -Math.PI / 2 + f * turns * 6.283, r = r0 + (r1 - r0) * f;
+    out.push([640 + r * Math.cos(th), 320 + r * Math.sin(th)]);
+  }
+  return out;
+}
+function switchbackWay() {
+  const ys = [80, 200, 320, 440, 560], xL = 340, xR = 940, rr = 60, out = [];
+  for (let x = -50; x <= xR; x += 20) out.push([x, ys[0]]);
+  for (let i = 0; i < 4; i++) {
+    const right = i % 2 === 0, cx = right ? xR : xL, cy = ys[i] + rr;
+    for (let a = -90; a <= 90; a += 6) {
+      const r = a * Math.PI / 180;
+      out.push([cx + (right ? 1 : -1) * rr * Math.cos(r), cy + rr * Math.sin(r)]);
+    }
+    const to = i === 3 ? 700 : (right ? xL : xR), from = right ? xR : xL, dir = to > from ? 1 : -1;
+    for (let x = from; dir > 0 ? x <= to : x >= to; x += 20 * dir) out.push([x, ys[i + 1]]);
+  }
+  return out;
+}
+function heartWay() {
+  const s = 16, cx = 640, cy = 310, out = [[640, -50]];
+  for (let t = 0; t <= 6.283 - 0.9; t += 0.03) {
+    out.push([cx + s * 16 * Math.pow(Math.sin(t), 3), cy - s * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]);
+  }
+  return out;
+}
+function waveWay() {
+  const out = [];
+  for (let y = -50; y <= 560; y += 6) out.push([640 + 250 * Math.sin((y + 50) / 330 * 6.283), y]);
+  return out;
+}
+
+const LEVELS = [
+  {
+    name: "Jungle Snake", desc: "A lazy S-curve. A good warm-up.", way: [[620, -50], [620, 70], [850, 105], [905, 250], [700, 318], [425, 268], [335, 395], [520, 495], [750, 478], [815, 365], [655, 385]],
+    balls: 80, speed: 26,
+    theme: { bg: ["#2f7d3a", "#1d5a2c", "#0d2d17"], blob: [40, 120, 60], leaf: "rgba(200,255,200,.14)", track: ["#3b2a20", "#6d4c41", "#a1887f", "#6b4a3d", "#4e342e"], pebble: ["#d7ccc8", "#efebe9"], plat: ["#6aa84f", "#3b7a37"] }
+  },
+  {
+    name: "Desert Spiral", desc: "The chain spirals in to the skull. Long and tricky.", way: spiralWay(), dense: true,
+    balls: 90, speed: 25,
+    theme: { bg: ["#f5d68e", "#d9a85a", "#8a5a2a"], blob: [210, 160, 90], leaf: "rgba(255,240,200,.28)", track: ["#4a3320", "#7a5a3a", "#c9a779", "#8a6a45", "#5d432b"], pebble: ["#fff3d6", "#e8cfa0"], plat: ["#d8b777", "#a98242"] }
+  },
+  {
+    name: "Ice Switchbacks", desc: "Five long sweeps from side to side.", way: switchbackWay(), dense: true,
+    balls: 90, speed: 28,
+    theme: { bg: ["#d8f1fe", "#8cc9ee", "#2d6fa3"], blob: [150, 205, 240], leaf: "rgba(255,255,255,.55)", track: ["#1f4b6e", "#4b86b4", "#dff2fc", "#8fc0e0", "#4a7fa8"], pebble: ["#ffffff", "#d4ecfa"], plat: ["#bfe3f7", "#7fb6d8"] }
+  },
+  {
+    name: "Candy Heart", desc: "Follow the heart. Sharp turns at the bottom.", way: heartWay(), dense: true,
+    balls: 70, speed: 28,
+    theme: { bg: ["#ffd9ec", "#f59ac8", "#8f2d6a"], blob: [255, 160, 210], leaf: "rgba(255,230,245,.45)", track: ["#5a1f45", "#9c4a7b", "#f3b8d8", "#c97aa8", "#7a3560"], pebble: ["#fff0f8", "#ffd0e8"], plat: ["#f7b2d6", "#d4709f"] }
+  },
+  {
+    name: "Ocean Waves", desc: "Big waves, and the balls come fast!", way: waveWay(), dense: true,
+    balls: 70, speed: 33,
+    theme: { bg: ["#27b5d4", "#0c6e9a", "#063a5e"], blob: [60, 190, 220], leaf: "rgba(200,245,255,.3)", track: ["#2d4a3a", "#8d7a52", "#e8d9a8", "#b9a56f", "#7a6a42"], pebble: ["#fff8e1", "#f0e0b0"], plat: ["#4fc3d8", "#1d8bb0"] }
+  }
+];
+LEVELS.forEach(L => {
+  const p = L.dense ? L.way : catmull(L.way), c = [0];
+  for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  L.pts = p; L.cum = c; L.len = c[c.length - 1];
+});
+
+let LEVEL = LEVELS[0], pts = LEVEL.pts, cum = LEVEL.cum, PATH_LEN = LEVEL.len;
 
 function seg(d) {
   let lo = 0, hi = cum.length - 2;
@@ -39,32 +105,33 @@ function posAt(d) {
 }
 function tangentAt(d) {
   const i = Math.min(Math.max(seg(Math.max(d, 0)), 0), pts.length - 2);
-  const dx = pts[i + 1][0] - pts[i][0], dy = pts[i + 1][1] - pts[i][1], l = Math.hypot(dx, dy) || 1;
+  // look a few points ahead so dense paths give a smooth direction
+  const j = Math.min(i + 3, pts.length - 1), k = Math.max(i - 2, 0);
+  const dx = pts[j][0] - pts[k][0], dy = pts[j][1] - pts[k][1], l = Math.hypot(dx, dy) || 1;
   return [dx / l, dy / l];
 }
 
-// ---------- pre-rendered pictures ----------
+// ---------- pre-rendered background for the current level ----------
 function makeLayer() { const c = document.createElement("canvas"); c.width = W; c.height = H; return [c, c.getContext("2d")]; }
-
 const [bgCanvas, bg] = makeLayer();
-(function drawBackground() {
+
+function renderBackground(L) {
+  const T = L.theme;
+  bg.clearRect(0, 0, W, H);
   const g = bg.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, 760);
-  g.addColorStop(0, "#2f7d3a"); g.addColorStop(0.6, "#1d5a2c"); g.addColorStop(1, "#0d2d17");
+  g.addColorStop(0, T.bg[0]); g.addColorStop(0.6, T.bg[1]); g.addColorStop(1, T.bg[2]);
   bg.fillStyle = g; bg.fillRect(0, 0, W, H);
-  // soft leafy blobs
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < 70; i++) {
     bg.save(); bg.translate(rnd() * W, rnd() * H); bg.rotate(rnd() * 6.28);
-    bg.fillStyle = `rgba(${40 + rnd() * 40 | 0},${120 + rnd() * 60 | 0},${60 + rnd() * 30 | 0},.14)`;
+    bg.fillStyle = `rgba(${T.blob[0] + rnd() * 30 | 0},${T.blob[1] + rnd() * 30 | 0},${T.blob[2] + rnd() * 30 | 0},.14)`;
     bg.beginPath(); bg.ellipse(0, 0, 40 + rnd() * 60, 14 + rnd() * 16, 0, 0, 6.28); bg.fill(); bg.restore();
   }
-  // the winding path
   const trace = () => { bg.beginPath(); pts.forEach(([x, y], i) => i ? bg.lineTo(x, y) : bg.moveTo(x, y)); };
   bg.lineCap = "round"; bg.lineJoin = "round";
-  [[66, "rgba(0,0,0,.28)", 5], [58, "#3b2a20", 0], [52, "#6d4c41", 0], [44, "#a1887f", 0], [37, "#6b4a3d", 0], [31, "#4e342e", 0]].forEach(([w, c, o]) => {
+  [[66, "rgba(0,0,0,.28)", 5], [58, T.track[0], 0], [52, T.track[1], 0], [44, T.track[2], 0], [37, T.track[3], 0], [31, T.track[4], 0]].forEach(([w, c, o]) => {
     bg.strokeStyle = c; bg.lineWidth = w; bg.save(); bg.translate(0, o); trace(); bg.stroke(); bg.restore();
   });
-  // pebbles along both edges
   let last = -999;
   for (let i = 1; i < pts.length; i++) {
     if (cum[i] - last < 15) continue;
@@ -72,11 +139,10 @@ const [bgCanvas, bg] = makeLayer();
     const t = tangentAt(cum[i]), nx = -t[1], ny = t[0];
     [-1, 1].forEach(sd => {
       const off = sd * (28 + rnd() * 3);
-      bg.fillStyle = rnd() > .5 ? "#d7ccc8" : "#efebe9";
+      bg.fillStyle = rnd() > .5 ? T.pebble[0] : T.pebble[1];
       bg.beginPath(); bg.arc(pts[i][0] + nx * off, pts[i][1] + ny * off, 2.2 + rnd() * 1.6, 0, 6.28); bg.fill();
     });
   }
-  // little gold dots in the middle of the groove
   bg.fillStyle = "rgba(255,213,79,.35)";
   for (let d = 10; d < PATH_LEN; d += 34) { const p = posAt(d); bg.beginPath(); bg.arc(p[0], p[1], 2, 0, 6.28); bg.fill(); }
   // skull hole
@@ -90,13 +156,20 @@ const [bgCanvas, bg] = makeLayer();
   bg.fillStyle = "#111"; [-7, 7].forEach(o => { bg.beginPath(); bg.arc(hx + o, hy - 4, 4.5, 0, 6.28); bg.fill(); });
   bg.fillRect(hx - 1.5, hy + 3, 3, 4);
   // platforms for both players
-  [[150, 320, "P1", "#42a5f5"], [1130, 320, "P2", "#ef5350"]].forEach(([x, y, label, col]) => {
+  [[150, 320, "#42a5f5"], [1130, 320, "#ef5350"]].forEach(([x, y, col]) => {
     const pg = bg.createRadialGradient(x, y, 20, x, y, 112);
-    pg.addColorStop(0, "#6aa84f"); pg.addColorStop(1, "#3b7a37");
+    pg.addColorStop(0, T.plat[0]); pg.addColorStop(1, T.plat[1]);
     bg.fillStyle = pg; bg.beginPath(); bg.arc(x, y, 108, 0, 6.28); bg.fill();
     bg.strokeStyle = col; bg.lineWidth = 5; bg.setLineDash([10, 9]); bg.stroke(); bg.setLineDash([]);
   });
-})();
+}
+
+function setLevel(L) {
+  LEVEL = L; pts = L.pts; cum = L.cum; PATH_LEN = L.len;
+  TOTAL_BALLS = L.balls; baseSpeed = L.speed;
+  renderBackground(L);
+}
+setLevel(LEVELS[0]);
 
 const sprites = COLORS.map(([a, b]) => {
   // base sprite has a swirl so you can see the ball roll
@@ -144,7 +217,7 @@ const touches = new Map(); // pointerId -> shooter (touch mode)
 const $ = id => document.getElementById(id);
 
 function newShooter(x, y, ang, tint, name) {
-  return { x, y, ang, tint, name, cur: 0, next: 0, cool: 0, score: 0, recoil: 0, flash: 0, hold: false };
+  return { x, y, ang, tint, name, cur: 0, next: 0, cool: 0, score: 0, recoil: 0, flash: 0, hold: false, aiming: false };
 }
 function resetShooters() {
   shooters = [newShooter(150, 320, 0, "#42a5f5", "P1"), newShooter(1130, 320, Math.PI, "#ef5350", "P2")];
@@ -162,9 +235,11 @@ function chainColors() {
 function pickColor() { const c = chainColors(); return c[Math.floor(Math.random() * c.length)]; }
 
 function show(id) {
-  ["ov-menu", "ov-mode", "ov-over"].forEach(o => { $(o).hidden = o !== id; });
+  ["ov-menu", "ov-level", "ov-mode", "ov-over"].forEach(o => { $(o).hidden = o !== id; });
 }
 function toMenu() { resetGame(); state = "menu"; show("ov-menu"); }
+let levelIndex = 0;
+function chooseLevel(i) { levelIndex = i; setLevel(LEVELS[i]); resetGame(); state = "mode"; show("ov-mode"); }
 function startGame(m) {
   mode = m;
   resetGame();
@@ -219,22 +294,29 @@ canvas.addEventListener("pointerdown", e => {
     mouse.x = x; mouse.y = y;
     const s = shooters[1];
     if (e.button === 2 || Math.hypot(x - s.x, y - s.y) < 34) swapColors(s);
-    else if (e.button === 0) { s.ang = Math.atan2(y - s.y, x - s.x); s.hold = true; shoot(s); }
+    else if (e.button === 0) { s.ang = Math.atan2(mouse.y - s.y, mouse.x - s.x); s.hold = true; shoot(s); }
     return;
   }
+  // touch: hold to aim, release to shoot
   const s = shooters[x < W / 2 ? 0 : 1];
   if (Math.hypot(x - s.x, y - s.y) < 46) { swapColors(s); return; }
+  if (s.aiming) return; // this player is already aiming with another finger
   canvas.setPointerCapture(e.pointerId);
   touches.set(e.pointerId, s);
-  s.ang = Math.atan2(y - s.y, x - s.x); s.hold = true; shoot(s);
+  s.aiming = true;
+  s.ang = Math.atan2(y - s.y, x - s.x);
+  SFX.play("click");
 });
-const release = e => {
+const release = (e, fire) => {
   const s = touches.get(e.pointerId);
-  if (s) { s.hold = false; touches.delete(e.pointerId); }
+  if (s) {
+    s.aiming = false; touches.delete(e.pointerId);
+    if (fire) { const [x, y] = toCanvas(e); s.ang = Math.atan2(y - s.y, x - s.x); shoot(s); }
+  }
   if (mode === "keys" && shooters) shooters[1].hold = false;
 };
-canvas.addEventListener("pointerup", release);
-canvas.addEventListener("pointercancel", release);
+canvas.addEventListener("pointerup", e => release(e, true));
+canvas.addEventListener("pointercancel", e => release(e, false));
 canvas.addEventListener("contextmenu", e => e.preventDefault());
 
 // ---------- chain logic ----------
@@ -323,7 +405,7 @@ function update(dt) {
   }
   shooters.forEach(s => { s.cool = Math.max(0, s.cool - dt); if (s.hold) shoot(s); });
 
-  moveChain(dt, spawned < 14 ? RUSH_SPEED : BASE_SPEED);
+  moveChain(dt, spawned < 14 ? RUSH_SPEED : baseSpeed);
 
   // gap closed? check for a new match where the two halves meet
   if (join !== null) {
@@ -365,6 +447,7 @@ function endGame(win) {
   SFX.play(win ? "win" : "lose");
   for (let i = 0; i < 70; i++) sparks(W / 2 + (Math.random() - .5) * 600, H / 2 + (Math.random() - .5) * 300, win ? COLORS[i % 5][0] : "#ff8a80", 1);
   const [a, b] = shooters.map(s => s.score);
+  $("btn-next").hidden = !(win && levelIndex < LEVELS.length - 1);
   $("over-title").textContent = win ? "You cleared the chain!" : "The chain reached the skull!";
   const lead = a === b ? "It is a tie." : (a > b ? "P1 scored more." : "P2 scored more.");
   $("over-text").innerHTML = `${win ? "Great teamwork!" : "Try again together."}<br><b style="color:#90caf9">P1: ${a}</b> &nbsp;·&nbsp; <b style="color:#ef9a9a">P2: ${b}</b><br>Team total: ${a + b}<br>${lead}`;
@@ -376,8 +459,9 @@ function drawShooter(s) {
   ctx.save(); ctx.translate(s.x, s.y);
   const back = s.recoil * 8;
   ctx.save(); ctx.rotate(s.ang);
-  ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 3; ctx.setLineDash([2, 12]); ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(66, 0); ctx.lineTo(420, 0); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = s.aiming ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.3)"; ctx.lineWidth = s.aiming ? 5 : 3; ctx.setLineDash([2, s.aiming ? 10 : 12]); ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(66, 0); ctx.lineTo(s.aiming ? 700 : 420, 0); ctx.stroke(); ctx.setLineDash([]);
+  if (s.aiming) { ctx.strokeStyle = s.tint; ctx.lineWidth = 3; ctx.setLineDash([]); ctx.beginPath(); ctx.arc(0, 0, 50, -0.35, 0.35); ctx.stroke(); }
   ctx.fillStyle = "#37474f"; ctx.fillRect(10 - back, -13, 46, 26);
   ctx.fillStyle = s.tint; ctx.fillRect(10 - back, -13, 46, 7);
   ctx.fillStyle = "#263238"; ctx.fillRect(54 - back, -16, 8, 32);
@@ -407,7 +491,7 @@ function drawShooter(s) {
 function drawWorld() {
   ctx.drawImage(bgCanvas, 0, 0);
   // drifting leaves
-  ctx.fillStyle = "rgba(200,255,200,.14)";
+  ctx.fillStyle = LEVEL.theme.leaf;
   leaves.forEach(l => { ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.p); ctx.beginPath(); ctx.ellipse(0, 0, l.s, l.s * 0.45, 0, 0, 6.28); ctx.fill(); ctx.restore(); });
 
   // skull hole glow when the chain is close
@@ -465,7 +549,7 @@ function drawZones(alpha) {
     ctx.strokeRect(x + 14, 14, w - 28, H - 28); ctx.setLineDash([]);
     ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = "800 34px system-ui,sans-serif"; ctx.fillText(label, x + w / 2, H * 0.2);
-    ctx.font = "20px system-ui,sans-serif"; ctx.fillText("Touch here to aim and shoot", x + w / 2, H * 0.2 + 40);
+    ctx.font = "20px system-ui,sans-serif"; ctx.fillText("Hold to aim, release to shoot", x + w / 2, H * 0.2 + 40);
     ctx.fillText("Tap your frog to switch colour", x + w / 2, H * 0.2 + 68);
   };
   ctx.save(); ctx.globalAlpha = alpha;
@@ -486,8 +570,8 @@ function drawHud() {
   ctx.font = "14px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.8)";
   ctx.fillText(left + " balls left", W / 2, H - 18);
   ctx.font = "13px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.7)";
-  ctx.textAlign = "left"; ctx.fillText(mode === "keys" ? "← → turn · ↑ shoot · ↓ switch" : "Touch the left side", 24, H - 18);
-  ctx.textAlign = "right"; ctx.fillText(mode === "keys" ? "mouse aim · click shoot · right click switch" : "Touch the right side", W - 24, H - 18);
+  ctx.textAlign = "left"; ctx.fillText(mode === "keys" ? "← → turn · ↑ shoot · ↓ switch" : "Hold to aim · release to shoot", 24, H - 18);
+  ctx.textAlign = "right"; ctx.fillText(mode === "keys" ? "mouse aim · click shoot · right click switch" : "Hold to aim · release to shoot", W - 24, H - 18);
   ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,.85)";
   ctx.fillText(mode === "keys" ? "P1 · KEYBOARD" : "P1 · TOUCH", 150, 468);
   ctx.fillText(mode === "keys" ? "P2 · MOUSE" : "P2 · TOUCH", 1130, 468);
@@ -543,10 +627,40 @@ function frame(now) {
 
 resetGame();
 state = "menu";
-$("btn-play").addEventListener("click", () => { SFX.play("click"); state = "mode"; show("ov-mode"); });
+function buildLevelCards() {
+  const box = $("levels");
+  LEVELS.forEach((L, i) => {
+    const card = document.createElement("button");
+    card.type = "button"; card.className = "level";
+    const c = document.createElement("canvas"); c.width = 256; c.height = 128;
+    const x = c.getContext("2d"), k = 256 / W;
+    const g = x.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0, L.theme.bg[0]); g.addColorStop(1, L.theme.bg[2]);
+    x.fillStyle = g; x.fillRect(0, 0, 256, 128);
+    x.lineCap = x.lineJoin = "round";
+    [[11, L.theme.track[1]], [8, L.theme.track[2]], [5, L.theme.track[4]]].forEach(([w, col]) => {
+      x.strokeStyle = col; x.lineWidth = w; x.beginPath();
+      L.pts.forEach(([px, py], j) => j ? x.lineTo(px * k, py * k) : x.moveTo(px * k, py * k)); x.stroke();
+    });
+    const [hx, hy] = L.pts[L.pts.length - 1];
+    x.fillStyle = "#111"; x.strokeStyle = "#ffca28"; x.lineWidth = 2; x.beginPath(); x.arc(hx * k, hy * k, 8, 0, 6.28); x.fill(); x.stroke();
+    [[150, "#42a5f5"], [1130, "#ef5350"]].forEach(([px, col]) => { x.fillStyle = col; x.beginPath(); x.arc(px * k, 320 * k, 8, 0, 6.28); x.fill(); });
+    card.append(c);
+    const t = document.createElement("b"); t.textContent = (i + 1) + ". " + L.name;
+    const d = document.createElement("span"); d.textContent = L.desc;
+    card.append(t, d);
+    card.addEventListener("click", () => { SFX.play("click"); chooseLevel(i); });
+    box.append(card);
+  });
+}
+buildLevelCards();
+
+$("btn-play").addEventListener("click", () => { SFX.play("click"); state = "level"; show("ov-level"); });
 $("mode-keys").addEventListener("click", () => startGame("keys"));
 $("mode-touch").addEventListener("click", () => startGame("touch"));
 $("btn-again").addEventListener("click", () => startGame(mode));
+$("btn-next").addEventListener("click", () => { chooseLevel(levelIndex + 1); startGame(mode); });
+$("btn-levels").addEventListener("click", () => { SFX.play("click"); resetGame(); state = "level"; show("ov-level"); });
 $("btn-menu").addEventListener("click", () => { SFX.play("click"); toMenu(); });
 SFX.bindButton($("btn-sound"));
 requestAnimationFrame(frame);

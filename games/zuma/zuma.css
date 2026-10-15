@@ -28,3 +28,14 @@ kbd { background:#fff; color:#14351f; border-radius:5px; padding:0 .4rem; font-w
 @media (orientation:portrait) { .rotate-note { display:block; } canvas { width:100%; } .stage { align-items:flex-start; } }
 @media (max-width:700px) { .modes { grid-template-columns:1fr; } }
 @media (max-height:480px) { .modal { padding:.6rem 1rem; } .modal p { margin:.2rem 0 .5rem; font-size:.85rem; } .mode { padding:.5rem .8rem; } .mode span { font-size:.75rem; } .modes { margin-top:.3rem; gap:.6rem; } .logo { font-size:2.2rem; } }
+
+.levels { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.8rem; margin-top:.8rem; max-height:60vh; overflow:auto; padding:.2rem; }
+.level { font:inherit; color:#fff; text-align:left; background:rgba(0,0,0,.25); border:2px solid rgba(255,255,255,.25); border-radius:16px; padding:.5rem; cursor:pointer; display:flex; flex-direction:column; gap:.25rem; transition:transform .15s, border-color .15s; }
+.level:hover, .level:focus-visible { transform:translateY(-4px); border-color:#ffe066; }
+.level canvas { width:100%; height:auto; border-radius:10px; display:block; cursor:pointer; box-shadow:none; aspect-ratio:2/1; }
+.level b { font-size:.95rem; } .level span { font-size:.78rem; color:#d7ead8; line-height:1.3; }
+.btns { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; }
+.go[hidden] { display:none; }
+.go.alt { background:linear-gradient(180deg,#fff,#cfd8dc); box-shadow:0 6px 0 #90a4ae; font-size:1.05rem; padding:.7rem 1.6rem; }
+@media (max-height:480px) { .levels { max-height:55vh; } .level span { display:none; } }
+.modal.wide { width:min(94vw,780px); } .levels { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
