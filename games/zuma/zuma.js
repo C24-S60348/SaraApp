@@ -209,6 +209,8 @@ let chain, headD, spawned, projectiles, shooters, join, combo, state, bursts, ti
 let mode = "keys";          // "keys" = keyboard + mouse, "touch" = touch + touch
 let introT = 0, zoneT = 0, goT = 0, shake = 0, danger = 0, dangerBeep = 0, comboBanner = null;
 let particles = [], texts = [], joinOwner = null;
+let rewind = 0, streak = 0, timeBanner = null, lastPop = [640, 320];
+const STREAK_EVERY = 3, BONUS_SECONDS = 2, REWIND_SPEED = 240; // every 3 matches in a row (or a chain reaction) = the chain rolls back 2 seconds
 const leaves = Array.from({ length: 26 }, () => ({ x: Math.random() * W, y: Math.random() * H, s: 4 + Math.random() * 7, v: 8 + Math.random() * 18, p: Math.random() * 6.28 }));
 const keys = {};
 const mouse = { x: 900, y: 320 };
@@ -225,7 +227,7 @@ function resetShooters() {
 }
 function resetGame() {
   chain = []; headD = 0; spawned = 0; projectiles = []; join = null; combo = 0; bursts = []; time = 0;
-  particles = []; texts = []; comboBanner = null; shake = 0; danger = 0; touches.clear();
+  particles = []; texts = []; comboBanner = null; rewind = 0; streak = 0; timeBanner = null; shake = 0; danger = 0; touches.clear();
   resetShooters();
 }
 function chainColors() {
@@ -335,6 +337,14 @@ function sparks(x, y, color, n) {
   }
 }
 
+function grantTime(sec) {
+  rewind += sec * baseSpeed; // 2 seconds of the chain's normal travel, rolled backwards
+  timeBanner = { text: "-" + sec + "s", t: 0 };
+  texts.push({ x: lastPop[0], y: lastPop[1] - 34, text: "-" + sec + "s", t: 0, color: "#80deea" });
+  sparks(lastPop[0], lastPop[1], "#80deea", 14);
+  SFX.play("rewind");
+}
+
 function removeRange(a, b, owner) {
   const count = b - a + 1;
   let cx = 0, cy = 0;
@@ -344,6 +354,7 @@ function removeRange(a, b, owner) {
     sparks(x, y, COLORS[chain[i].color][0], 9);
     cx += x / count; cy += y / count;
   }
+  lastPop = [cx, cy];
   const gained = count * 10 * (1 + combo);
   owner.score += gained;
   texts.push({ x: cx, y: cy - 10, text: "+" + gained, t: 0, color: owner.tint === "#42a5f5" ? "#bbdefb" : "#ffcdd2" });
@@ -367,7 +378,11 @@ function insertShot(p, hitIdx) {
   SFX.play("thud");
   sparks(p.x, p.y, "#fff", 4);
   const [a, b] = runAround(idx);
-  if (b - a + 1 >= 3) removeRange(a, b, p.owner);
+  if (b - a + 1 >= 3) {
+    removeRange(a, b, p.owner);
+    streak++;
+    if (streak % STREAK_EVERY === 0) grantTime(BONUS_SECONDS);
+  } else streak = 0;
 }
 
 function updateEffects(dt) {
@@ -378,6 +393,7 @@ function updateEffects(dt) {
   bursts.forEach(b => { b.t += dt; });
   bursts = bursts.filter(b => b.t < 0.35);
   if (comboBanner) { comboBanner.t += dt; if (comboBanner.t > 1.1) comboBanner = null; }
+  if (timeBanner) { timeBanner.t += dt; if (timeBanner.t > 1.3) timeBanner = null; }
   shake *= Math.exp(-7 * dt);
   leaves.forEach(l => { l.y += l.v * dt; l.x += Math.sin(time * 0.6 + l.p) * 12 * dt; l.p += dt; if (l.y > H + 20) { l.y = -20; l.x = Math.random() * W; } });
   shooters.forEach(s => { s.recoil = Math.max(0, s.recoil - dt * 6); s.flash = Math.max(0, s.flash - dt * 7); });
@@ -405,7 +421,11 @@ function update(dt) {
   }
   shooters.forEach(s => { s.cool = Math.max(0, s.cool - dt); if (s.hold) shoot(s); });
 
-  moveChain(dt, spawned < 14 ? RUSH_SPEED : baseSpeed);
+  if (rewind > 0) {
+    const step = Math.min(rewind, REWIND_SPEED * dt, Math.max(0, headD));
+    rewind -= step > 0 ? step : rewind; // nothing left to roll back
+    moveChain(dt, -step / dt);
+  } else moveChain(dt, spawned < 14 ? RUSH_SPEED : baseSpeed);
 
   // gap closed? check for a new match where the two halves meet
   if (join !== null) {
@@ -413,7 +433,7 @@ function update(dt) {
     else if (chain.slice(join).every((b, k) => Math.abs(b.d - (headD - (join + k) * S)) < 0.6)) {
       if (chain[join - 1].color === chain[join].color) {
         const [a, b] = runAround(join);
-        if (b - a + 1 >= 3) { combo++; removeRange(a, b, joinOwner); }
+        if (b - a + 1 >= 3) { combo++; removeRange(a, b, joinOwner); grantTime(BONUS_SECONDS); }
         else { join = null; combo = 0; }
       } else { join = null; combo = 0; }
     }
@@ -575,6 +595,18 @@ function drawHud() {
   ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,.85)";
   ctx.fillText(mode === "keys" ? "P1 · KEYBOARD" : "P1 · TOUCH", 150, 468);
   ctx.fillText(mode === "keys" ? "P2 · MOUSE" : "P2 · TOUCH", 1130, 468);
+  if (streak > 0 && state === "play") {
+    ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#b2ebf2";
+    ctx.fillText("Streak " + streak + "  (" + (STREAK_EVERY - (streak % STREAK_EVERY)) + " more for -" + BONUS_SECONDS + "s)", W / 2, H - 62);
+  }
+  if (timeBanner) {
+    const t = timeBanner.t, sc = t < 0.2 ? 0.5 + t * 2.5 : 1;
+    ctx.save(); ctx.translate(W / 2, 160); ctx.scale(sc, sc); ctx.globalAlpha = Math.min(1, (1.3 - t) * 3);
+    ctx.font = "900 64px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 9; ctx.strokeStyle = "rgba(0,60,80,.6)";
+    ctx.strokeText(timeBanner.text, 0, 0); ctx.fillStyle = "#80deea"; ctx.fillText(timeBanner.text, 0, 0);
+    ctx.font = "700 18px system-ui,sans-serif"; ctx.lineWidth = 5; ctx.strokeText("more time!", 0, 34); ctx.fillStyle = "#fff"; ctx.fillText("more time!", 0, 34);
+    ctx.restore();
+  }
   if (comboBanner) {
     const t = comboBanner.t, sc = t < 0.2 ? 0.6 + t * 2 : 1;
     ctx.save(); ctx.translate(W / 2, 100); ctx.scale(sc, sc); ctx.globalAlpha = Math.min(1, (1.1 - t) * 3);

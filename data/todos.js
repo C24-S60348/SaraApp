@@ -51,6 +51,7 @@ window.APPS = [
       { t: "Shared chain with separate scores", done: true },
       { t: "5 levels with different path styles and themes (jungle, desert spiral, ice switchbacks, candy heart, ocean waves)", done: true },
       { t: "Touch: hold to aim, release to shoot", done: true },
+      { t: "Streak bonus: every 3 matches in a row or a chain reaction rolls the chain back (-2s)", done: true },
       { t: "Lock levels until the one before is cleared, and save the best scores", done: false },
       { t: "Power-ups (slow, reverse, bomb)", done: false },
       { t: "Main menu and a choice of controls (keyboard + mouse, or touch + touch)", done: true },
