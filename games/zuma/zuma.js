@@ -3,7 +3,7 @@ const COLORS = [
   ["#ff8a80", "#c62828"], ["#82b1ff", "#1565c0"], ["#a5e8a0", "#2e7d32"], ["#fff59d", "#f9a825"], ["#ce93d8", "#6a1b9a"]
 ];
 let TOTAL_BALLS = 80, baseSpeed = 26;
-const RUSH_SPEED = 190, CLOSE_SPEED = 560, BACK_SPEED = 900;
+const RUSH_SPEED = 190, CLOSE_SPEED = 560, BACK_SPEED = 520;
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -362,8 +362,10 @@ function removeRange(a, b, owner) {
   if (count >= 4 || combo > 0) SFX.play("combo", combo);
   if (combo > 0) comboBanner = { text: "COMBO x" + (combo + 1) + "!", t: 0 };
   shake = Math.max(shake, 3 + count * 1.2 + combo * 4);
+  // The FRONT part (nearer the skull) rolls back toward the back part. The back part stays put.
+  const tailRemoved = b === chain.length - 1;
   chain.splice(a, count);
-  if (a === 0) headD -= count * S;
+  if (!tailRemoved) headD -= count * S;
   join = a > 0 && a < chain.length ? a : null;
   joinOwner = owner;
 }
@@ -430,7 +432,7 @@ function update(dt) {
   // gap closed? check for a new match where the two halves meet
   if (join !== null) {
     if (join <= 0 || join >= chain.length) { join = null; combo = 0; }
-    else if (chain.slice(join).every((b, k) => Math.abs(b.d - (headD - (join + k) * S)) < 0.6)) {
+    else if (chain.slice(0, join).every((b, k) => Math.abs(b.d - (headD - k * S)) < 0.6)) {
       if (chain[join - 1].color === chain[join].color) {
         const [a, b] = runAround(join);
         if (b - a + 1 >= 3) { combo++; removeRange(a, b, joinOwner); grantTime(BONUS_SECONDS); }
