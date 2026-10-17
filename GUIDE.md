@@ -40,3 +40,6 @@ All games use `js/sfx.js`, which makes the sounds in code (no audio files). The 
 
 ## Online multiplayer
 See `online.html` (also on the website) for what is needed.
+
+## Online Pet Puzzle Battle
+Open the game, press "Play online", and create or join a room with a 4-letter code. Online code: `games/pets/pets-online.js`. The database is Firebase project `saraapp`; the rules are in `firebase.rules.json`.

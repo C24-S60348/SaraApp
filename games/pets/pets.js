@@ -107,7 +107,7 @@ function petSVG(p) {
 function buildPanels() {
   chosen.forEach((p, i) => {
     $("panel-" + i).innerHTML =
-      `<div class="who">P${i + 1}</div>
+      `<div class="who">P${i + 1}${online && online.seat === i ? " · you" : ""}</div>
        <div class="pet" id="pet-${i}">${petSVG(p)}</div>
        <div class="pname">${p.name}</div>
        <div class="swatch"><i style="background:${COLORS[p.color][0]}"></i>${p.color} blocks hurt</div>
@@ -123,13 +123,17 @@ function updateHP() {
   });
 }
 function updateTurn() {
-  $("turn").textContent = gameOver ? "" : "P" + (turn + 1) + "'s turn · " + chosen[turn].name;
+  $("turn").textContent = gameOver ? "" : (online ? (turn === online.seat ? "Your turn" : "P" + (turn + 1) + "'s turn") : "P" + (turn + 1) + "'s turn") + " · " + chosen[turn].name;
   $("turn").dataset.p = turn;
   [0, 1].forEach(i => $("panel-" + i).classList.toggle("active", !gameOver && i === turn));
 }
 
 // ---------- board ----------
-const randColor = () => COLOR_IDS[Math.floor(Math.random() * COLOR_IDS.length)];
+// Game rules use `rng` (seeded in online games so both phones get the same board). Visual effects use Math.random.
+let rng = Math.random;
+let online = null;      // set while playing online: { code, seat, ... }
+let onMoveHook = null;  // online: called when this player makes a valid move
+const randColor = () => COLOR_IDS[Math.floor(rng() * COLOR_IDS.length)];
 
 function makeTile(r, c, color) {
   const t = { id: nextId++, color, r, c, el: document.createElement("div") };
@@ -212,7 +216,8 @@ async function reshuffle() {
   $("hint").textContent = "No moves left. Shuffling!";
   const tiles = grid.flat();
   do {
-    const colors = tiles.map(t => t.color).sort(() => Math.random() - 0.5);
+    const colors = tiles.map(t => t.color);
+    for (let i = colors.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [colors[i], colors[j]] = [colors[j], colors[i]]; }
     tiles.forEach((t, i) => { t.color = colors[i]; t.el.firstChild.style.cssText = `--a:${COLORS[t.color][0]};--b:${COLORS[t.color][1]}`; });
   } while (findRuns().length || !hasMoves());
   await sleep(500);
@@ -294,9 +299,10 @@ async function gravity() {
   await sleep(300);
 }
 
-async function trySwap(a, b) {
+async function trySwap(a, b, remote = false) {
   if (busy || gameOver) return;
   busy = true;
+  const [ar, ac, br, bc] = [a.r, a.c, b.r, b.c];
   clearSelection();
   $("hint").textContent = "";
   SFX.play("swap");
@@ -312,6 +318,7 @@ async function trySwap(a, b) {
     busy = false;
     return;
   }
+  if (online && !remote && onMoveHook) onMoveHook(ar, ac, br, bc);
   const total = await resolve();
   await sleep(350);
   if (hp[1 - turn] <= 0) return finish(turn);
@@ -335,8 +342,10 @@ const tileOf = e => {
 };
 
 let drag = null;
+const myTurn = () => !online || turn === online.seat;
 board.addEventListener("pointerdown", e => {
   if (busy || gameOver) return;
+  if (!myTurn()) { $("hint").textContent = "Wait for your friend's move."; return; }
   const t = tileOf(e);
   if (!t) return;
   if (selected && selected !== t && adjacent(selected, t)) { trySwap(selected, t); return; }
@@ -359,48 +368,68 @@ board.addEventListener("pointermove", e => {
 window.addEventListener("pointerup", () => { drag = null; });
 
 // ---------- game flow ----------
-function showSelect(step) {
-  gameOver = true; busy = false;
-  updateTurn();
-  $("ov-title").textContent = "P" + (step + 1) + ": choose your pet";
-  $("ov-text").innerHTML = step === 0
-    ? "Your pet's colour is the block colour <b>you</b> need to match to hurt the enemy."
-    : "P1 picked <b>" + chosen[0].name + "</b>. Now P2, pick a different pet.";
+// Generic pop-up: a title, some HTML text, optional extra nodes and buttons.
+function modal(title, html, buttons = [], nodes = []) {
+  $("ov-title").textContent = title;
+  $("ov-text").innerHTML = html;
+  $("ov-picks").hidden = true;
   $("ov-btn").hidden = true;
-  const picks = $("ov-picks");
-  picks.hidden = false;
-  picks.replaceChildren(...PET_LIST.map(p => {
-    const taken = step === 1 && p === chosen[0];
+  $("ov-extra").replaceChildren(...nodes, ...buttons.map(({ label, fn, alt }) => {
     const b = document.createElement("button");
-    b.type = "button";
-    b.className = "pick" + (taken ? " taken" : "");
-    b.disabled = taken;
-    b.innerHTML = `<div class="pick-art">${petSVG(p)}</div><b>${p.name}</b><span><i style="background:${COLORS[p.color][0]}"></i>${p.color}</span>`;
-    b.addEventListener("click", () => {
-      SFX.play("click");
-      chosen[step] = p;
-      if (step === 0) showSelect(1); else start();
-    });
+    b.type = "button"; b.className = "go" + (alt ? " alt" : ""); b.textContent = label;
+    b.addEventListener("click", () => { SFX.play("click"); fn(); });
     return b;
   }));
   $("overlay").hidden = false;
+}
+
+// Shows the pet cards. `taken` is the pet that can't be chosen. `onPick(index)` is called with the PET_LIST index.
+function picker(step, text, taken, onPick) {
+  gameOver = true; busy = false;
+  updateTurn();
+  modal("P" + (step + 1) + ": choose your pet", text);
+  const picks = $("ov-picks");
+  picks.hidden = false;
+  picks.replaceChildren(...PET_LIST.map((p, i) => {
+    const isTaken = p === taken;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pick" + (isTaken ? " taken" : "");
+    b.disabled = isTaken;
+    b.innerHTML = `<div class="pick-art">${petSVG(p)}</div><b>${p.name}</b><span><i style="background:${COLORS[p.color][0]}"></i>${p.color}</span>`;
+    b.addEventListener("click", () => { SFX.play("click"); onPick(i); });
+    return b;
+  }));
+}
+
+function showSelect(step) {
+  picker(step, step === 0
+    ? "Your pet's colour is the block colour <b>you</b> need to match to hurt the enemy."
+    : "P1 picked <b>" + chosen[0].name + "</b>. Now P2, pick a different pet.",
+  step === 1 ? chosen[0] : null,
+  i => { chosen[step] = PET_LIST[i]; if (step === 0) showSelect(1); else start(); });
+}
+
+function showMenu() {
+  online = null; onMoveHook = null; gameOver = true;
+  updateTurn();
+  modal("Pet Puzzle Battle",
+    "Two players take turns. First, each player picks a pet. Your pet's colour is the block colour you need to match.<br>Swipe a block to swap it with its neighbour and make a line of 3 or more.<br><b>Only your pet's colour hurts the enemy.</b> Bigger lines and chain reactions hit harder!",
+    [{ label: "Play on this device", fn: () => showSelect(0) }, { label: "Play online", alt: true, fn: () => onlineMenu() }]);
 }
 
 function finish(winner) {
   gameOver = true;
   busy = false;
   updateTurn();
-  $("ov-picks").hidden = true;
   SFX.play("win");
   shakeScreen(3);
-  $("ov-title").textContent = "P" + (winner + 1) + " wins!";
-  $("ov-text").textContent = chosen[winner].name + " is the champion. Play again?";
-  $("ov-btn").textContent = "Choose pets again";
-  $("ov-btn").hidden = false;
-  $("overlay").hidden = false;
+  if (online) return onlineFinish(winner);
+  modal("P" + (winner + 1) + " wins!", chosen[winner].name + " is the champion. Play again?", [{ label: "Choose pets again", fn: () => showSelect(0) }]);
 }
 
 function start() {
+  if (!online) rng = Math.random;
   hp = [MAX_HP, MAX_HP];
   turn = 0; busy = false; gameOver = false;
   buildPanels();
@@ -433,12 +462,8 @@ function intro() {
 buildPanels();
 updateHP();
 newBoard();
-$("ov-picks").hidden = true;
-$("ov-title").textContent = "Pet Puzzle Battle";
-$("ov-text").innerHTML = "Two players share one screen and take turns.<br>First, each player picks a pet. Your pet's colour is the block colour you need to match.<br>Swipe a block to swap it with its neighbour and make a line of 3 or more.<br><b>Only your pet's colour hurts the enemy.</b><br>Bigger lines and chain reactions hit harder!";
-$("ov-btn").textContent = "Choose pets";
-$("ov-btn").addEventListener("click", () => { SFX.play("click"); showSelect(0); });
-$("btn-restart").addEventListener("click", () => { SFX.play("click"); showSelect(0); });
+$("btn-restart").addEventListener("click", () => { SFX.play("click"); if (online) leaveOnline(); else showSelect(0); });
 SFX.bindButton($("btn-sound"));
 window.addEventListener("resize", sizeFx);
 sizeFx();
+showMenu();

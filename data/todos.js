@@ -35,7 +35,9 @@ window.APPS = [
       { t: "Special blocks (bomb, heal, shield)", done: false },
       { t: "Play against the computer", done: false },
       { t: "Sound effects, particles, screen shake and intro animation", done: true },
-      { t: "Online multiplayer: 2 devices with a room code (needs a Firebase project, see plan)", done: false },
+      { t: "Online multiplayer: 2 devices with a 4-letter room code, rematch, and friend-left message", done: true },
+      { t: "Clean up old rooms automatically", done: false },
+      { t: "Quick match with a stranger (no code)", done: false },
       { t: "Music", done: false }
     ]
   },
@@ -69,11 +71,11 @@ window.APPS = [
     link: "online.html",
     items: [
       { t: "Write the plan and requirements", done: true },
-      { t: "Create a free Firebase project and send the firebaseConfig", done: false },
-      { t: "Build online Pet Puzzle Battle (room code, shared board seed, send moves)", done: false },
+      { t: "Create a free Firebase project (saraapp) and set up the database", done: true },
+      { t: "Build online Pet Puzzle Battle (room code, shared board seed, send moves)", done: true },
       { t: "Build online Zuma Duo (host runs the game, guest sends touches)", done: false },
-      { t: "Database rules so only room data can be used", done: false },
-      { t: "Test with two real devices", done: false }
+      { t: "Database rules so only room data can be used", done: true },
+      { t: "Test Pet Puzzle online with two real devices (phone + computer)", done: false }
     ]
   }
 ];
