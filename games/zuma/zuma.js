@@ -209,6 +209,10 @@ let chain, headD, spawned, projectiles, shooters, join, combo, state, bursts, ti
 let mode = "keys";          // "keys" = keyboard + mouse, "touch" = touch + touch
 let introT = 0, zoneT = 0, goT = 0, shake = 0, danger = 0, dangerBeep = 0, comboBanner = null;
 let particles = [], texts = [], joinOwner = null;
+let online = null;          // {role:'host'|'guest', seat} while playing online (see zuma-online.js)
+let onEmit = null, onInput = null, onAim = null, onHostTick = null; // hooks set by zuma-online.js
+let ballId = 0, touchAim = null, pickingOnline = false;
+function emit(ev) { if (online && online.role === "host" && onEmit) onEmit(ev); }
 let rewind = 0, streak = 0, timeBanner = null, lastPop = [640, 320];
 const STREAK_EVERY = 3, BONUS_SECONDS = 2, REWIND_SPEED = 240; // every 3 matches in a row (or a chain reaction) = the chain rolls back 2 seconds
 const leaves = Array.from({ length: 26 }, () => ({ x: Math.random() * W, y: Math.random() * H, s: 4 + Math.random() * 7, v: 8 + Math.random() * 18, p: Math.random() * 6.28 }));
@@ -227,7 +231,7 @@ function resetShooters() {
 }
 function resetGame() {
   chain = []; headD = 0; spawned = 0; projectiles = []; join = null; combo = 0; bursts = []; time = 0;
-  particles = []; texts = []; comboBanner = null; rewind = 0; streak = 0; timeBanner = null; shake = 0; danger = 0; touches.clear();
+  particles = []; texts = []; comboBanner = null; rewind = 0; streak = 0; timeBanner = null; shake = 0; danger = 0; touches.clear(); touchAim = null;
   resetShooters();
 }
 function chainColors() {
@@ -237,9 +241,9 @@ function chainColors() {
 function pickColor() { const c = chainColors(); return c[Math.floor(Math.random() * c.length)]; }
 
 function show(id) {
-  ["ov-menu", "ov-level", "ov-mode", "ov-over"].forEach(o => { $(o).hidden = o !== id; });
+  ["ov-menu", "ov-level", "ov-mode", "ov-over", "ov-net"].forEach(o => { $(o).hidden = o !== id; });
 }
-function toMenu() { resetGame(); state = "menu"; show("ov-menu"); }
+function toMenu() { pickingOnline = false; resetGame(); state = "menu"; show("ov-menu"); }
 let levelIndex = 0;
 function chooseLevel(i) { levelIndex = i; setLevel(LEVELS[i]); resetGame(); state = "mode"; show("ov-mode"); }
 function startGame(m) {
@@ -256,7 +260,7 @@ function spawnBalls() {
     const n = chain.length;
     do { color = Math.floor(Math.random() * COLORS.length); if (n && Math.random() < 0.45) color = chain[n - 1].color; }
     while (n >= 2 && chain[n - 1].color === color && chain[n - 2].color === color);
-    chain.push({ color, d: headD - n * S, ox: 0, oy: 0 });
+    chain.push({ id: ballId++, color, d: headD - n * S, ox: 0, oy: 0 });
     spawned++;
   }
 }
@@ -268,12 +272,13 @@ function shoot(s) {
   projectiles.push({ x: s.x + Math.cos(s.ang) * muzzle, y: s.y + Math.sin(s.ang) * muzzle, vx: Math.cos(s.ang) * speed, vy: Math.sin(s.ang) * speed, color: s.cur, owner: s });
   s.cur = s.next; s.next = pickColor(); s.cool = 0.26; s.recoil = 1; s.flash = 1;
   SFX.play("shoot");
+  emit({ k: "shoot", by: shooters.indexOf(s) });
 }
 function swapColors(s) { if (state === "play") { [s.cur, s.next] = [s.next, s.cur]; SFX.play("swapColor"); } }
 
 window.addEventListener("keydown", e => {
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault();
-  if (e.key === "ArrowDown" && !keys.ArrowDown && mode === "keys" && shooters) swapColors(shooters[0]);
+  if (e.key === "ArrowDown" && !keys.ArrowDown && shooters) { if (mode === "keys") swapColors(shooters[0]); else if (mode === "online") mySwap(); }
   keys[e.key] = true;
 });
 window.addEventListener("keyup", e => { keys[e.key] = false; });
@@ -283,8 +288,38 @@ function toCanvas(e) {
   const r = canvas.getBoundingClientRect();
   return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
 }
+// --- online: "my" shooter is P1 for the host and P2 for the guest ---
+function myShoot(ang) {
+  const s = shooters[online.seat];
+  s.ang = ang;
+  if (online.role === "host") return shoot(s);
+  if (state !== "play" || s.cool > 0) return;
+  s.cool = 0.26; s.recoil = 1; s.flash = 1; SFX.play("shoot");
+  onInput({ k: "shoot", a: +ang.toFixed(3) });
+}
+function mySwap() {
+  if (state !== "play") return;
+  const s = shooters[online.seat];
+  if (online.role === "host") return swapColors(s);
+  [s.cur, s.next] = [s.next, s.cur]; s.lock = performance.now() + 700; SFX.play("swapColor");
+  onInput({ k: "swap" });
+}
+function myAim(ang) { shooters[online.seat].ang = ang; if (online.role === "guest" && onAim) onAim(ang); }
+function onlineControls(dt) {
+  const s = shooters[online.seat];
+  if (keys.ArrowLeft) myAim(s.ang - 2.7 * dt);
+  if (keys.ArrowRight) myAim(s.ang + 2.7 * dt);
+  if (keys.ArrowUp) myShoot(s.ang);
+}
+
 canvas.addEventListener("pointermove", e => {
   const [x, y] = toCanvas(e);
+  if (mode === "online") {
+    const me = shooters[online.seat];
+    if (e.pointerType === "touch") { if (touchAim === e.pointerId) myAim(Math.atan2(y - me.y, x - me.x)); }
+    else { mouse.x = x; mouse.y = y; myAim(Math.atan2(y - me.y, x - me.x)); }
+    return;
+  }
   if (mode === "keys") { mouse.x = x; mouse.y = y; return; }
   const s = touches.get(e.pointerId);
   if (s) s.ang = Math.atan2(y - s.y, x - s.x);
@@ -292,6 +327,16 @@ canvas.addEventListener("pointermove", e => {
 canvas.addEventListener("pointerdown", e => {
   if (state !== "play") return;
   const [x, y] = toCanvas(e);
+  if (mode === "online") {
+    const me = shooters[online.seat], ang = Math.atan2(y - me.y, x - me.x), nearFrog = Math.hypot(x - me.x, y - me.y) < (e.pointerType === "touch" ? 46 : 34);
+    if (e.pointerType === "touch") {
+      if (nearFrog) return mySwap();
+      if (touchAim !== null) return;
+      canvas.setPointerCapture(e.pointerId); touchAim = e.pointerId; me.aiming = true; myAim(ang); SFX.play("click");
+    } else if (e.button === 2 || nearFrog) mySwap();
+    else if (e.button === 0) { mouse.x = x; mouse.y = y; myAim(ang); myShoot(ang); }
+    return;
+  }
   if (mode === "keys") {
     mouse.x = x; mouse.y = y;
     const s = shooters[1];
@@ -310,6 +355,12 @@ canvas.addEventListener("pointerdown", e => {
   SFX.play("click");
 });
 const release = (e, fire) => {
+  if (mode === "online" && touchAim === e.pointerId) {
+    const me = shooters[online.seat], [x, y] = toCanvas(e);
+    me.aiming = false; touchAim = null;
+    if (fire) { const ang = Math.atan2(y - me.y, x - me.x); myAim(ang); myShoot(ang); }
+    return;
+  }
   const s = touches.get(e.pointerId);
   if (s) {
     s.aiming = false; touches.delete(e.pointerId);
@@ -337,31 +388,40 @@ function sparks(x, y, color, n) {
   }
 }
 
+function timeEffects(ev) {
+  timeBanner = { text: "-" + ev.s + "s", t: 0 };
+  texts.push({ x: ev.x, y: ev.y - 34, text: "-" + ev.s + "s", t: 0, color: "#80deea" });
+  sparks(ev.x, ev.y, "#80deea", 14);
+  SFX.play("rewind");
+}
 function grantTime(sec) {
   rewind += sec * baseSpeed; // 2 seconds of the chain's normal travel, rolled backwards
-  timeBanner = { text: "-" + sec + "s", t: 0 };
-  texts.push({ x: lastPop[0], y: lastPop[1] - 34, text: "-" + sec + "s", t: 0, color: "#80deea" });
-  sparks(lastPop[0], lastPop[1], "#80deea", 14);
-  SFX.play("rewind");
+  const ev = { k: "time", s: sec, x: lastPop[0], y: lastPop[1] };
+  timeEffects(ev); emit(ev);
+}
+// pop effects are shared by the host and (via an event) the guest
+function popEffects(ev) {
+  ev.b.forEach(([x, y, c]) => { bursts.push({ x, y, color: c, t: 0 }); sparks(x, y, COLORS[c][0], 9); });
+  texts.push({ x: ev.x, y: ev.y - 10, text: "+" + ev.g, t: 0, color: ev.by === 0 ? "#bbdefb" : "#ffcdd2" });
+  SFX.play("pop", ev.pp);
+  if (ev.big) SFX.play("combo", ev.cm);
+  if (ev.cm > 0) comboBanner = { text: "COMBO x" + (ev.cm + 1) + "!", t: 0 };
+  shake = Math.max(shake, 3 + ev.n * 1.2 + ev.cm * 4);
 }
 
 function removeRange(a, b, owner) {
-  const count = b - a + 1;
+  const count = b - a + 1, list = [];
   let cx = 0, cy = 0;
   for (let i = a; i <= b; i++) {
     const p = posAt(chain[i].d), x = p[0] + chain[i].ox, y = p[1] + chain[i].oy;
-    bursts.push({ x, y, color: chain[i].color, t: 0 });
-    sparks(x, y, COLORS[chain[i].color][0], 9);
+    list.push([Math.round(x), Math.round(y), chain[i].color]);
     cx += x / count; cy += y / count;
   }
   lastPop = [cx, cy];
   const gained = count * 10 * (1 + combo);
   owner.score += gained;
-  texts.push({ x: cx, y: cy - 10, text: "+" + gained, t: 0, color: owner.tint === "#42a5f5" ? "#bbdefb" : "#ffcdd2" });
-  SFX.play("pop", combo + (count > 3 ? 2 : 0));
-  if (count >= 4 || combo > 0) SFX.play("combo", combo);
-  if (combo > 0) comboBanner = { text: "COMBO x" + (combo + 1) + "!", t: 0 };
-  shake = Math.max(shake, 3 + count * 1.2 + combo * 4);
+  const ev = { k: "pop", b: list, x: Math.round(cx), y: Math.round(cy), g: gained, by: shooters.indexOf(owner), pp: combo + (count > 3 ? 2 : 0), cm: combo, big: count >= 4 || combo > 0, n: count };
+  popEffects(ev); emit(ev);
   // The FRONT part (nearer the skull) rolls back toward the back part. The back part stays put.
   const tailRemoved = b === chain.length - 1;
   chain.splice(a, count);
@@ -375,10 +435,11 @@ function insertShot(p, hitIdx) {
   const ahead = (p.x - (bp[0] + ball.ox)) * t[0] + (p.y - (bp[1] + ball.oy)) * t[1] > 0;
   const idx = ahead ? hitIdx : hitIdx + 1;
   const target = headD - idx * S, tp = posAt(target);
-  chain.splice(idx, 0, { color: p.color, d: target, ox: p.x - tp[0], oy: p.y - tp[1] });
+  chain.splice(idx, 0, { id: ballId++, color: p.color, d: target, ox: p.x - tp[0], oy: p.y - tp[1] });
   join = null; combo = 0;
   SFX.play("thud");
   sparks(p.x, p.y, "#fff", 4);
+  emit({ k: "thud", x: Math.round(p.x), y: Math.round(p.y) });
   const [a, b] = runAround(idx);
   if (b - a + 1 >= 3) {
     removeRange(a, b, p.owner);
@@ -420,6 +481,9 @@ function update(dt) {
     if (keys.ArrowRight) p1.ang += 2.7 * dt;
     if (keys.ArrowUp) shoot(p1);
     p2.ang = Math.atan2(mouse.y - p2.y, mouse.x - p2.x);
+  } else if (mode === "online") {
+    onlineControls(dt);                 // the host plays P1
+    if (online.p2ang !== undefined) p2.ang = online.p2ang; // P2's aim arrives from the friend's device
   }
   shooters.forEach(s => { s.cool = Math.max(0, s.cool - dt); if (s.hold) shoot(s); });
 
@@ -465,14 +529,22 @@ function update(dt) {
 
 function endGame(win) {
   state = "over";
+  const [a, b] = shooters.map(s => s.score);
+  emit({ k: "end", win: win ? 1 : 0, a, b });
+  showEnd(win, a, b);
+}
+function showEnd(win, a, b) {
+  state = "over";
   shake = win ? 6 : 16;
   SFX.play(win ? "win" : "lose");
   for (let i = 0; i < 70; i++) sparks(W / 2 + (Math.random() - .5) * 600, H / 2 + (Math.random() - .5) * 300, win ? COLORS[i % 5][0] : "#ff8a80", 1);
-  const [a, b] = shooters.map(s => s.score);
-  $("btn-next").hidden = !(win && levelIndex < LEVELS.length - 1);
+  const net = !!online;
+  $("btn-next").hidden = net || !(win && levelIndex < LEVELS.length - 1);
+  $("btn-again").hidden = net && online.role === "guest";
+  $("btn-levels").textContent = net ? "Leave" : "Levels";
   $("over-title").textContent = win ? "You cleared the chain!" : "The chain reached the skull!";
   const lead = a === b ? "It is a tie." : (a > b ? "P1 scored more." : "P2 scored more.");
-  $("over-text").innerHTML = `${win ? "Great teamwork!" : "Try again together."}<br><b style="color:#90caf9">P1: ${a}</b> &nbsp;·&nbsp; <b style="color:#ef9a9a">P2: ${b}</b><br>Team total: ${a + b}<br>${lead}`;
+  $("over-text").innerHTML = `${win ? "Great teamwork!" : "Try again together."}<br><b style="color:#90caf9">P1: ${a}</b> &nbsp;·&nbsp; <b style="color:#ef9a9a">P2: ${b}</b><br>Team total: ${a + b}<br>${lead}` + (net && online.role === "guest" ? "<br><i>Waiting for the host to play again…</i>" : "");
   setTimeout(() => { if (state === "over") show("ov-over"); }, 700);
 }
 
@@ -592,11 +664,12 @@ function drawHud() {
   ctx.font = "14px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.8)";
   ctx.fillText(left + " balls left", W / 2, H - 18);
   ctx.font = "13px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.7)";
-  ctx.textAlign = "left"; ctx.fillText(mode === "keys" ? "← → turn · ↑ shoot · ↓ switch" : "Hold to aim · release to shoot", 24, H - 18);
-  ctx.textAlign = "right"; ctx.fillText(mode === "keys" ? "mouse aim · click shoot · right click switch" : "Hold to aim · release to shoot", W - 24, H - 18);
+  ctx.textAlign = "left"; ctx.fillText(mode === "online" ? "aim: mouse · touch · ← →" : mode === "keys" ? "← → turn · ↑ shoot · ↓ switch" : "Hold to aim · release to shoot", 24, H - 18);
+  ctx.textAlign = "right"; ctx.fillText(mode === "online" ? "shoot: click · release · ↑   switch: right click · tap frog · ↓" : mode === "keys" ? "mouse aim · click shoot · right click switch" : "Hold to aim · release to shoot", W - 24, H - 18);
   ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,.85)";
-  ctx.fillText(mode === "keys" ? "P1 · KEYBOARD" : "P1 · TOUCH", 150, 468);
-  ctx.fillText(mode === "keys" ? "P2 · MOUSE" : "P2 · TOUCH", 1130, 468);
+  const tag = i => mode === "online" ? "P" + (i + 1) + (online && online.seat === i ? " · YOU" : " · FRIEND") : (i === 0 ? (mode === "keys" ? "P1 · KEYBOARD" : "P1 · TOUCH") : (mode === "keys" ? "P2 · MOUSE" : "P2 · TOUCH"));
+  ctx.fillText(tag(0), 150, 468);
+  ctx.fillText(tag(1), 1130, 468);
   if (streak > 0 && state === "play") {
     ctx.font = "bold 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#b2ebf2";
     ctx.fillText("Streak " + streak + "  (" + (STREAK_EVERY - (streak % STREAK_EVERY)) + " more for -" + BONUS_SECONDS + "s)", W / 2, H - 62);
@@ -630,7 +703,7 @@ function draw() {
   if (state === "play" || state === "intro" || state === "over") drawHud();
   if (state === "intro") {
     if (introT < 1.1) bigText("READY?", 0.7 + Math.min(1, introT * 3) * 0.3, Math.min(1, (1.1 - introT) * 4));
-    else bigText("GO!", 1 + (introT - 1.1) * 0.5, Math.min(1, (1.7 - introT) * 3), "#ffe066");
+    else bigText("GO!", 1 + (introT - 1.1) * 0.5, Math.max(0, Math.min(1, (1.7 - introT) * 3)), "#ffe066");
   } else if (state === "play" && goT < 0.5) bigText("GO!", 1.3 + goT * 0.5, 1 - goT * 2, "#ffe066");
   if (mode === "touch" && (state === "intro" || state === "play") && zoneT < 3.4) drawZones(Math.min(1, (3.4 - zoneT) * 1.2, zoneT * 3 + 0.2));
 }
@@ -640,7 +713,9 @@ let lastT = performance.now(), ptime = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000);
   lastT = now; ptime += dt;
-  if (state === "intro") {
+  if (online && online.role === "guest") {
+    guestFrame(dt);
+  } else if (state === "intro") {
     introT += dt; zoneT += dt;
     updateEffects(dt);
     if (introT >= 1.7) { state = "play"; goT = 0.0001; shake = 9; SFX.play("go"); }
@@ -655,6 +730,7 @@ function frame(now) {
     moveChain(dt, 70);
     updateEffects(dt);
   }
+  if (online && online.role === "host" && onHostTick) onHostTick(dt);
   draw();
   requestAnimationFrame(frame);
 }
@@ -683,7 +759,7 @@ function buildLevelCards() {
     const t = document.createElement("b"); t.textContent = (i + 1) + ". " + L.name;
     const d = document.createElement("span"); d.textContent = L.desc;
     card.append(t, d);
-    card.addEventListener("click", () => { SFX.play("click"); chooseLevel(i); });
+    card.addEventListener("click", () => { SFX.play("click"); if (pickingOnline) onlineCreate(i); else chooseLevel(i); });
     box.append(card);
   });
 }
@@ -692,9 +768,10 @@ buildLevelCards();
 $("btn-play").addEventListener("click", () => { SFX.play("click"); state = "level"; show("ov-level"); });
 $("mode-keys").addEventListener("click", () => startGame("keys"));
 $("mode-touch").addEventListener("click", () => startGame("touch"));
-$("btn-again").addEventListener("click", () => startGame(mode));
+$("btn-again").addEventListener("click", () => { if (online) onlineAgain(); else startGame(mode); });
 $("btn-next").addEventListener("click", () => { chooseLevel(levelIndex + 1); startGame(mode); });
-$("btn-levels").addEventListener("click", () => { SFX.play("click"); resetGame(); state = "level"; show("ov-level"); });
-$("btn-menu").addEventListener("click", () => { SFX.play("click"); toMenu(); });
+$("btn-levels").addEventListener("click", () => { SFX.play("click"); if (online) return leaveOnline(); resetGame(); state = "level"; show("ov-level"); });
+$("btn-menu").addEventListener("click", () => { SFX.play("click"); if (online) leaveOnline(); else toMenu(); });
+$("btn-online").addEventListener("click", () => { SFX.play("click"); onlineMenu(); });
 SFX.bindButton($("btn-sound"));
 requestAnimationFrame(frame);

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="zuma.css">
 </head>
 <body>
+  <div class="toast" id="toast" hidden></div>
   <div class="topbar">
     <a class="pill" href="../../index.html">← SaraApp</a>
     <span class="rotate-note">Best in landscape</span>
@@ -24,7 +25,17 @@
       <div class="modal">
         <h1 class="logo">Zuma Duo</h1>
         <p>Two players, one chain. Work together and stop it before it reaches the skull!</p>
-        <button class="go" id="btn-play" type="button">Play</button>
+        <div class="btns"><button class="go" id="btn-play" type="button">Play</button><button class="go alt" id="btn-online" type="button">Play online</button></div>
+      </div>
+    </div>
+
+    <!-- online lobby / messages -->
+    <div class="overlay" id="ov-net" hidden>
+      <div class="modal">
+        <h2 id="net-title"></h2>
+        <p id="net-text"></p>
+        <div class="extra" id="net-nodes"></div>
+        <div class="btns" id="net-btns"></div>
       </div>
     </div>
 
@@ -65,7 +76,10 @@
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="../../js/sfx.js"></script>
   <script src="zuma.js"></script>
+  <script src="zuma-online.js"></script>
 </body>
 </html>

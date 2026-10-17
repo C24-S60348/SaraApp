@@ -43,3 +43,6 @@ See `online.html` (also on the website) for what is needed.
 
 ## Online Pet Puzzle Battle
 Open the game, press "Play online", and create or join a room with a 4-letter code. Online code: `games/pets/pets-online.js`. The database is Firebase project `saraapp`; the rules are in `firebase.rules.json`.
+
+## Online Zuma Duo
+Press "Play online" in the game. The player who creates the room is the host: they pick the level, play P1 (left) and their device runs the game. The friend joins with the 4-letter code and plays P2 (right). Online code: `games/zuma/zuma-online.js`.
