@@ -36,6 +36,7 @@ window.APPS = [
       { t: "Play against the computer", done: false },
       { t: "Sound effects, particles, screen shake and intro animation", done: true },
       { t: "Online multiplayer: 2 devices with a 4-letter room code, rematch, and friend-left message", done: true },
+      { t: "Reconnect after a reload or after switching apps (Rejoin room button)", done: true },
       { t: "Clean up old rooms automatically", done: false },
       { t: "Quick match with a stranger (no code)", done: false },
       { t: "Music", done: false }

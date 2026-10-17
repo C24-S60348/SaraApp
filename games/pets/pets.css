@@ -92,3 +92,6 @@ body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--in
 .code { display:block; font-size:2.8rem; font-weight:900; letter-spacing:.3em; margin:.4rem 0; color:#ffe066; text-shadow:0 3px 0 #b71c1c; }
 .code-input { font:inherit; font-size:1.6rem; font-weight:800; letter-spacing:.3em; text-transform:uppercase; text-align:center; width:7.5em; padding:.45rem; border-radius:14px; border:2px solid rgba(255,255,255,.4); background:rgba(0,0,0,.3); color:#fff; }
 .err { color:#ff9e9e; font-weight:700; width:100%; text-align:center; margin:0; }
+
+.toast { position:fixed; top:.7rem; left:50%; transform:translateX(-50%); z-index:30; background:#ffb300; color:#3b2a00; font-weight:700; padding:.5rem 1.1rem; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.4); }
+.toast[hidden] { display:none; }

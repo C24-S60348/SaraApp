@@ -18,7 +18,8 @@ let chosen = [PET_LIST[0], PET_LIST[1]]; // [P1's pet, P2's pet]
 const MAX_HP = 100;
 
 const $ = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+let SLEEP_SCALE = 1; // < 1 while replaying moves quickly
+const sleep = ms => new Promise(r => setTimeout(r, ms * SLEEP_SCALE));
 const board = $("board");
 board.style.setProperty("--n", N);
 
@@ -415,7 +416,8 @@ function showMenu() {
   updateTurn();
   modal("Pet Puzzle Battle",
     "Two players take turns. First, each player picks a pet. Your pet's colour is the block colour you need to match.<br>Swipe a block to swap it with its neighbour and make a line of 3 or more.<br><b>Only your pet's colour hurts the enemy.</b> Bigger lines and chain reactions hit harder!",
-    [{ label: "Play on this device", fn: () => showSelect(0) }, { label: "Play online", alt: true, fn: () => onlineMenu() }]);
+    [...(typeof savedRoom === "function" && savedRoom() ? [{ label: "Rejoin room " + savedRoom().code, fn: () => rejoinRoom(savedRoom()) }] : []),
+     { label: "Play on this device", fn: () => showSelect(0) }, { label: "Play online", alt: true, fn: () => onlineMenu() }]);
 }
 
 function finish(winner) {
@@ -466,4 +468,4 @@ $("btn-restart").addEventListener("click", () => { SFX.play("click"); if (online
 SFX.bindButton($("btn-sound"));
 window.addEventListener("resize", sizeFx);
 sizeFx();
-showMenu();
+// showMenu() is called at the end of pets-online.js

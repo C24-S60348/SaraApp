@@ -70,31 +70,52 @@ async function joinRoom(code) {
 function listen(ref, event, fn) { ref.on(event, fn); offs.push(() => ref.off(event, fn)); }
 function detach() { offs.forEach(f => f()); offs = []; }
 
-function enter(code, seat) {
-  const ref = db.ref("petRooms/" + code);
-  online = { code, seat, ref, round: -1, started: false, oppHere: false, oppSeen: false };
-  const me = ref.child("p" + (seat + 1) + "/here");
-  me.onDisconnect().set(false);
-  me.set(true);
+const SAVE_KEY = "saraapp-pet-room";
+function savedRoom() { try { return JSON.parse(sessionStorage.getItem(SAVE_KEY)); } catch (e) { return null; } }
+function saveRoom(v) { try { v ? sessionStorage.setItem(SAVE_KEY, JSON.stringify(v)) : sessionStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = !msg; }
 
-  if (seat === 0) modal("Room " + code, 'Share this code with your friend:<span class="code">' + code + '</span>Waiting for them to join…', [{ label: "Cancel", alt: true, fn: leaveOnline }]);
+// Come back to a room after a reload (the game is replayed from the saved moves).
+async function rejoinRoom(saved) {
+  try {
+    dbInit();
+    modal("Rejoining…", "One moment.");
+    const room = (await db.ref("petRooms/" + saved.code).once("value")).val();
+    if (!room) { saveRoom(null); return modal("Room not found", "That room no longer exists.", [{ label: "Back", fn: showMenu }]); }
+    enter(saved.code, saved.seat, true);
+  } catch (e) {
+    modal("Oops", e.message, [{ label: "Back", fn: showMenu }]);
+  }
+}
+
+function enter(code, seat, rejoin = false) {
+  const ref = db.ref("petRooms/" + code);
+  online = { code, seat, ref, round: -1, started: false, oppSeen: false, replay: rejoin };
+  saveRoom({ code, seat });
+
+  // "here" must be set again every time the phone reconnects (e.g. after switching apps to share the code)
+  const meRef = ref.child("p" + (seat + 1) + "/here");
+  listen(db.ref(".info/connected"), "value", s => {
+    if (s.val() === true) { meRef.onDisconnect().set(false); meRef.set(true); }
+  });
+
+  if (rejoin) modal("Rejoined " + code, "Getting back into the game…");
+  else if (seat === 0) modal("Room " + code, 'Share this code with your friend:<span class="code">' + code + '</span>Waiting for them to join…', [{ label: "Cancel", alt: true, fn: leaveOnline }]);
   else modal("Joined " + code, "Waiting for the game to start…");
 
+  const ready = () => online.seat === 1 || online.oppSeen; // the guest never has to wait for the host's presence
   listen(ref.child("p" + (seat === 0 ? 2 : 1) + "/here"), "value", s => {
     const here = !!s.val();
-    online.oppHere = here;
     if (here) online.oppSeen = true;
-    if (!here && online.oppSeen && online.started && !gameOver) {
-      gameOver = true;
-      modal("Your friend left", "They closed the game or lost connection.", [{ label: "Leave", fn: leaveOnline }]);
-    } else if (here && online.round >= 0 && !online.started) beginRound(online.round);
+    toast(!here && online.oppSeen ? "Your friend lost connection. Waiting for them…" : "");
+    if (online.round >= 0 && ready()) beginRound(online.round);
   });
   listen(ref.child("round"), "value", s => {
     const n = s.val();
     if (n === null || n === online.round) return;
     online.round = n;
     online.started = false;
-    if (online.oppHere) beginRound(n);
+    if (ready()) beginRound(n);
   });
 }
 
@@ -127,7 +148,7 @@ function beginRound(n) {
   on(roundRef.child("p2pet"), "value", s => { p2 = s.val(); refresh(); });
   on(roundRef.child("moves"), "child_added", s => {
     const m = s.val();
-    if (!m || m.by === seat) return; // my own moves are already applied
+    if (!m || m.n < moveCount) return; // already applied (e.g. my own move)
     pending[m.n] = m;
     pump();
   });
@@ -149,9 +170,11 @@ async function pump() {
     if (!online || gameOver) break;
     delete pending[moveCount];
     moveCount++;
+    SLEEP_SCALE = Object.keys(pending).length > 0 ? 0.12 : 1; // catching up after a reload: run fast
     const a = grid[m.a[0]][m.a[1]], b = grid[m.b[0]][m.b[1]];
     if (a && b) await trySwap(a, b, true);
   }
+  SLEEP_SCALE = 1;
   pumping = false;
 }
 
@@ -170,6 +193,9 @@ function rematch() {
 }
 
 function leaveOnline() {
+  saveRoom(null);
+  toast("");
+  SLEEP_SCALE = 1;
   if (online) {
     try { online.ref.child("p" + (online.seat + 1) + "/here").set(false); } catch (e) { /* ignore */ }
   }
@@ -178,3 +204,8 @@ function leaveOnline() {
   online = null; onMoveHook = null; pending = {};
   showMenu();
 }
+
+// phones freeze the page when you switch apps; wake the connection when you come back
+document.addEventListener("visibilitychange", () => { if (!document.hidden && db) db.goOnline(); });
+
+showMenu();
