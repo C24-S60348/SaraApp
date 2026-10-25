@@ -47,7 +47,7 @@ function render() {
     more.addEventListener("click", () => openDialog(app));
     row.append(more);
     if (app.link) {
-      const play = el("a", "btn small secondary", "Play");
+      const play = el("a", "btn small secondary", app.linkLabel || "Play");
       play.href = app.link;
       row.append(play);
     }

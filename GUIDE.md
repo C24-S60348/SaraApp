@@ -46,3 +46,7 @@ Open the game, press "Play online", and create or join a room with a 4-letter co
 
 ## Online Zuma Duo
 Press "Play online" in the game. The player who creates the room is the host: they pick the level, play P1 (left) and their device runs the game. The friend joins with the 4-letter code and plays P2 (right). Online code: `games/zuma/zuma-online.js`.
+
+## Elements and Bingo
+- `apps/elements/` : a glowing card carousel with live fire / lotus / sun / wind effects.
+- `bingo/` : the Festival of Lights Bingo card generator (your own file, unchanged). It has no link back to SaraApp, so you can share its link on its own: `/SaraApp/bingo/`.

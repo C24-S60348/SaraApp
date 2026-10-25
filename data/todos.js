@@ -79,5 +79,36 @@ window.APPS = [
       { t: "Database rules so only room data can be used", done: true },
       { t: "Test Pet Puzzle and Zuma Duo online with two real devices (phone + computer)", done: false }
     ]
+  },
+  {
+    id: "elements",
+    title: "Elements",
+    desc: "A glowing card carousel inspired by your video. Fire, lotus bloom, sun rays and swirling wind.",
+    link: "apps/elements/index.html",
+    linkLabel: "Open",
+    items: [
+      { t: "Card carousel with 4 elements (Ember, Bloom, Solar, Breeze)", done: true },
+      { t: "Live effects: flames, lotus petals, sun rays, wind swirls", done: true },
+      { t: "Tap, swipe, arrow keys and mouse wheel; auto-demo; sounds; floor reflection", done: true },
+      { t: "More elements (water, earth, lightning, shadow)", done: false },
+      { t: "Use this card style as the pet picker in Pet Puzzle Battle (pet colour = element)", done: false },
+      { t: "Use it as the plant picker in Tanam Tanam", done: false },
+      { t: "Firefox: add a fallback for the floor reflection", done: false }
+    ]
+  },
+  {
+    id: "bingo",
+    title: "Festival of Lights Bingo",
+    desc: "Printable bingo cards (6 per A4 page) plus a caller sheet. The page opens on its own, with no link back to SaraApp.",
+    link: "bingo/index.html",
+    linkLabel: "Open",
+    items: [
+      { t: "Card generator: 4x4 or 5x4 grid, every card different, A4 landscape or portrait", done: true },
+      { t: "Caller sheet and Print / Save as PDF", done: true },
+      { t: "For 400 players use the 4x4 grid and set Cards to 402 (67 A4 pages plus 1 caller page)", done: false },
+      { t: "Decide how to settle ties before the event (first to shout BINGO, or a lucky draw)", done: false },
+      { t: "Do a test print of one page before printing all 402 cards", done: false },
+      { t: "On-screen caller that picks a random picture each time", done: false }
+    ]
   }
 ];
