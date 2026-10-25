@@ -70,13 +70,14 @@ const step = d => select(idx + d);
 
 function resize() {
   const r = stage.getBoundingClientRect();
-  dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+  dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   W = r.width; H = r.height;
   canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   ph = Math.max(150, Math.min(250, H * 0.36)); pw = ph * 0.52;
   const root = document.documentElement.style;
   root.setProperty("--h", ph + "px"); root.setProperty("--w", pw + "px");
   root.setProperty("--gap", Math.min(pw * 2.35, W * 0.3) + "px");
+  petals = [];
   layout();
 }
 window.addEventListener("resize", resize);
@@ -113,6 +114,20 @@ function burst() { const [cx, cy] = center(); const c = ELEMENTS[idx].c; rings.p
 function pulse() { pulseT = 1; burst(); SFX.play(SOUND[ELEMENTS[idx].id]); }
 function spark(x, y, c, v = 1) { const a = rnd(0, TAU), s = rnd(30, 120) * v; return { x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30, life: 0, max: rnd(0.7, 1.6), c, r: rnd(1, 2.6) }; }
 
+// Pre-drawn soft blobs: drawing an image is far cheaper than building a gradient for every particle every frame.
+function blob(rgb) {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const x = c.getContext("2d"), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, `rgba(${rgb},1)`); g.addColorStop(1, `rgba(${rgb},0)`);
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return c;
+}
+const FIRE_STEPS = 24, mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+const fireSprites = Array.from({ length: FIRE_STEPS }, (_, i) => {
+  const t = i / (FIRE_STEPS - 1);
+  return blob((t < 0.3 ? mix([255, 225, 110], [255, 120, 30], t / 0.3) : mix([255, 120, 30], [190, 30, 20], (t - 0.3) / 0.7)).join(","));
+});
+
 function fire(dt, k) {
   const [cx, cy] = center(), s = ph / 210, w = pw * 1.25, h = ph * 1.25;
   if (k > 0.02) for (let i = 0, n = Math.round(260 * dt * k * (1 + pulseT)); i < n; i++) {
@@ -122,12 +137,11 @@ function fire(dt, k) {
   parts.forEach(p => {
     p.life += dt; p.x += (p.vx + Math.sin(clock * 6 + p.seed) * 22 * s) * dt; p.y += p.vy * dt;
     const t = p.life / p.max; if (t >= 1) return;
-    const col = t < 0.3 ? [255, 225, 110] : t < 0.65 ? [255, 120, 30] : [190, 30, 20];
-    const a = (1 - t) * 0.5 * k, r = p.size * (1 - t * 0.55);
-    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-    g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill();
+    const r = p.size * (1 - t * 0.55);
+    ctx.globalAlpha = (1 - t) * 0.5 * k;
+    ctx.drawImage(fireSprites[Math.min(FIRE_STEPS - 1, Math.floor(t * FIRE_STEPS))], p.x - r, p.y - r, r * 2, r * 2);
   });
+  ctx.globalAlpha = 1;
   parts = parts.filter(p => p.life < p.max);
   if (k > 0.02) { // heat glow on top of the card
     const g = ctx.createRadialGradient(cx, cy - h * 0.4, 5, cx, cy - h * 0.4, w * 1.1);
@@ -136,24 +150,41 @@ function fire(dt, k) {
   }
 }
 
+// Each ring of petals is drawn once (with its glow) into a small canvas; every frame we only rotate and scale it.
+let petals = [];
+function buildPetals() {
+  const h = ph * 1.25;
+  petals = [0, 1, 2].map(ring => {
+    const L = h * (0.68 + ring * 0.17), pwid = L * 0.36, pad = 26;
+    const c = document.createElement("canvas"); c.width = Math.ceil(pwid * 2 + pad * 2); c.height = Math.ceil(L + pad * 2);
+    const x = c.getContext("2d"), ox = c.width / 2, oy = c.height - pad;
+    const g = x.createLinearGradient(0, oy, 0, oy - L);
+    g.addColorStop(0, "rgba(255,50,170,.85)"); g.addColorStop(0.65, "rgba(255,110,200,.8)"); g.addColorStop(1, "rgba(255,225,245,.95)");
+    x.shadowColor = "rgba(255,70,190,.9)"; x.shadowBlur = 20;
+    x.fillStyle = g; x.strokeStyle = "rgba(255,220,245,.8)"; x.lineWidth = 1.2;
+    x.beginPath(); x.moveTo(ox, oy); x.bezierCurveTo(ox + pwid, oy - L * 0.2, ox + pwid * 0.9, oy - L * 0.8, ox, oy - L); x.bezierCurveTo(ox - pwid * 0.9, oy - L * 0.8, ox - pwid, oy - L * 0.2, ox, oy); x.fill(); x.stroke();
+    return { c, ox, oy };
+  });
+}
+
 function lotus(dt, k) {
   if (k < 0.02) return;
+  if (!petals.length) buildPetals();
   const [cx, cy] = center(), w = pw * 1.25, h = ph * 1.25, bx = cx, by = cy + h * 0.12;
-  ctx.save();
+  ctx.globalAlpha = k;
+  ctx.globalCompositeOperation = "source-over"; // normal blending keeps the petals pink (additive blending washes them out to white)
   for (let ring = 2; ring >= 0; ring--) {
-    const n = 7 + ring * 2, base = h * (0.68 + ring * 0.17) * (0.4 + 0.6 * k);
+    const n = 7 + ring * 2, sp = petals[ring];
     for (let i = 0; i < n; i++) {
-      const ang = -Math.PI * 0.97 + ((i + 0.5) / n) * Math.PI * 0.94, L = base * (0.93 + 0.07 * Math.sin(clock * 1.6 + i + ring)), pwid = L * 0.36;
-      ctx.save(); ctx.translate(bx, by); ctx.rotate(ang + Math.PI / 2);
-      const g = ctx.createLinearGradient(0, 0, 0, -L);
-      g.addColorStop(0, `rgba(255,50,170,${0.85 * k})`); g.addColorStop(0.65, `rgba(255,110,200,${0.8 * k})`); g.addColorStop(1, `rgba(255,225,245,${0.95 * k})`);
-      ctx.shadowColor = "rgba(255,70,190,.9)"; ctx.shadowBlur = 22 * k;
-      ctx.fillStyle = g; ctx.strokeStyle = `rgba(255,220,245,${0.8 * k})`; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(pwid, -L * 0.2, pwid * 0.9, -L * 0.8, 0, -L); ctx.bezierCurveTo(-pwid * 0.9, -L * 0.8, -pwid, -L * 0.2, 0, 0); ctx.fill(); ctx.stroke();
-      ctx.restore();
+      const ang = -Math.PI * 0.97 + ((i + 0.5) / n) * Math.PI * 0.94, f = (0.4 + 0.6 * k) * (0.93 + 0.07 * Math.sin(clock * 1.6 + i + ring));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(bx, by); ctx.rotate(ang + Math.PI / 2); ctx.scale(f, f);
+      ctx.drawImage(sp.c, -sp.ox, -sp.oy);
     }
   }
-  ctx.restore();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "lighter";
   if (Math.random() < 0.6 * k) sparkles.push({ x: cx + rnd(-w * 1.3, w * 1.3), y: cy + rnd(-h * 0.7, h * 0.3), vx: rnd(-8, 8), vy: -rnd(10, 40), life: 0, max: rnd(1.2, 2.4), c: [255, 190, 235], r: rnd(1, 2.8) });
 }
 

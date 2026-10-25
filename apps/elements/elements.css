@@ -14,14 +14,14 @@ body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#fff; ba
 .track { position:absolute; inset:0; z-index:2; }
 
 .card { --c:255,80,60; position:absolute; left:50%; top:47%; width:var(--w); height:var(--h); margin:calc(var(--h) / -2) 0 0 calc(var(--w) / -2);
-  border-radius:999px; border:1px solid rgba(255,255,255,.1); cursor:pointer; overflow:hidden;
+  border-radius:999px; border:0; cursor:pointer; overflow:hidden;
   background:linear-gradient(180deg, #0d0809 0%, #0b0708 52%, rgba(var(--c), .38) 100%);
   display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:calc(var(--h) * .12);
-  transition:transform .75s cubic-bezier(.2,.9,.25,1), opacity .6s, box-shadow .6s, border-color .6s, filter .6s;
+  transition:transform .75s cubic-bezier(.2,.9,.25,1), opacity .6s, box-shadow .6s;
   -webkit-box-reflect:below 8px linear-gradient(transparent 58%, rgba(255,255,255,.22)); will-change:transform; }
 .card .fill { position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity .6s; }
 .card .fill::after { content:""; position:absolute; left:10%; right:10%; top:3%; height:34%; border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0)); }
-.card.on { border-color:rgba(255,255,255,.55); box-shadow:0 0 0 1px rgba(var(--c), .6), 0 0 50px 8px rgba(var(--c), .55), inset 0 0 30px rgba(255,255,255,.18); }
+.card.on { box-shadow:0 0 50px 8px rgba(var(--c), .5); }
 .card.on .fill { opacity:1; }
 .card .num { position:absolute; top:6%; font-size:.55rem; letter-spacing:.2em; opacity:.55; }
 .card svg { position:relative; width:34%; height:auto; stroke:#fff; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; margin-bottom:.9rem; filter:drop-shadow(0 0 6px rgba(var(--c), .8)); }
