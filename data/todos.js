@@ -110,5 +110,21 @@ window.APPS = [
       { t: "Do a test print of one page before printing all 402 cards", done: false },
       { t: "On-screen caller that picks a random picture each time", done: false }
     ]
+  },
+  {
+    id: "bingo-cut",
+    title: "Bingo: cut-friendly version",
+    desc: "Same bingo cards, but the 6 cards on each A4 page touch each other with square corners, so you only make straight cuts. Two designs to choose from.",
+    link: "bingo/cut/index.html",
+    linkLabel: "Open",
+    items: [
+      { t: "No white gaps, square corners, optional cut guides", done: true },
+      { t: "Design A (royal purple) and Design B (teal and gold)", done: true },
+      { t: "Printer-safe edge option (4 mm white border) for printers that cannot print to the paper edge", done: true },
+      { t: "Title no longer cut off (\"Festival Of Light\" is now \"Festival Of Lights:\")", done: true },
+      { t: "Test print one page on the real printer, then cut it, before printing all 402 cards", done: false },
+      { t: "Choose the final design (A or B)", done: false },
+      { t: "Apply the title fix to the first bingo page too", done: false }
+    ]
   }
 ];
