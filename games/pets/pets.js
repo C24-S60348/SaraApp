@@ -108,7 +108,7 @@ function petSVG(p) {
 function buildPanels() {
   chosen.forEach((p, i) => {
     $("panel-" + i).innerHTML =
-      `<div class="who">P${i + 1}${online && online.seat === i ? " · you" : ""}</div>
+      `<div class="who">P${i + 1}${online && online.seat === i ? " · you" : ""}${ai && i === 1 ? " · CPU " + ai.level : ""}</div>
        <div class="pet" id="pet-${i}">${petSVG(p)}</div>
        <div class="pname">${p.name}</div>
        <div class="swatch"><i style="background:${COLORS[p.color][0]}"></i>${p.color} blocks hurt</div>
@@ -124,7 +124,7 @@ function updateHP() {
   });
 }
 function updateTurn() {
-  $("turn").textContent = gameOver ? "" : (online ? (turn === online.seat ? "Your turn" : "P" + (turn + 1) + "'s turn") : "P" + (turn + 1) + "'s turn") + " · " + chosen[turn].name;
+  $("turn").textContent = gameOver ? "" : (online ? (turn === online.seat ? "Your turn" : "P" + (turn + 1) + "'s turn") : ai ? (turn === 0 ? "Your turn" : "Computer's turn") : "P" + (turn + 1) + "'s turn") + " · " + chosen[turn].name;
   $("turn").dataset.p = turn;
   [0, 1].forEach(i => $("panel-" + i).classList.toggle("active", !gameOver && i === turn));
 }
@@ -133,11 +133,12 @@ function updateTurn() {
 // Game rules use `rng` (seeded in online games so both phones get the same board). Visual effects use Math.random.
 let rng = Math.random;
 let online = null;      // set while playing online: { code, seat, ... }
+let ai = null;          // set when playing the computer: { level: "easy" | "medium" | "hard" }
 let onMoveHook = null;  // online: called when this player makes a valid move
 const randColor = () => COLOR_IDS[Math.floor(rng() * COLOR_IDS.length)];
 
 function makeTile(r, c, color) {
-  const t = { id: nextId++, color, r, c, el: document.createElement("div") };
+  const t = { id: nextId++, color, r, c, special: null, el: document.createElement("div") };
   t.el.className = "tile";
   t.el.innerHTML = `<i style="--a:${COLORS[color][0]};--b:${COLORS[color][1]}"></i>`;
   t.el.dataset.id = t.id;
@@ -160,14 +161,15 @@ function newBoard() {
   if (!hasMoves()) newBoard();
 }
 
-function findRuns() {
+// ---------- game rules that work on any grid (used by the real board and by the computer player) ----------
+function runsIn(g) {
   const runs = [];
   for (let r = 0; r < N; r++) {
     let c = 0;
     while (c < N) {
       let e = c;
-      while (e + 1 < N && grid[r][e + 1] && grid[r][c] && grid[r][e + 1].color === grid[r][c].color) e++;
-      if (grid[r][c] && e - c >= 2) runs.push({ color: grid[r][c].color, cells: Array.from({ length: e - c + 1 }, (_, k) => grid[r][c + k]) });
+      while (e + 1 < N && g[r][e + 1] && g[r][c] && g[r][e + 1].color === g[r][c].color) e++;
+      if (g[r][c] && e - c >= 2) runs.push({ color: g[r][c].color, cells: Array.from({ length: e - c + 1 }, (_, k) => g[r][c + k]) });
       c = e + 1;
     }
   }
@@ -175,12 +177,50 @@ function findRuns() {
     let r = 0;
     while (r < N) {
       let e = r;
-      while (e + 1 < N && grid[e + 1][c] && grid[r][c] && grid[e + 1][c].color === grid[r][c].color) e++;
-      if (grid[r][c] && e - r >= 2) runs.push({ color: grid[r][c].color, cells: Array.from({ length: e - r + 1 }, (_, k) => grid[r + k][c]) });
+      while (e + 1 < N && g[e + 1][c] && g[r][c] && g[e + 1][c].color === g[r][c].color) e++;
+      if (g[r][c] && e - r >= 2) runs.push({ color: g[r][c].color, cells: Array.from({ length: e - r + 1 }, (_, k) => g[r + k][c]) });
       r = e + 1;
     }
   }
   return runs;
+}
+const findRuns = () => runsIn(grid);
+
+// Power-ups: a line of 4 leaves a BOMB (clears the 3x3 around it), a line of 5 or more leaves a STAR (clears every block of one colour).
+// A power-up goes off when it is part of a match, or when you swap it with a neighbour (a star then clears the neighbour's colour).
+function expandIn(g, kill, forced) {
+  const queue = [], fired = [], target = new Map(), seen = new Set();
+  kill.forEach(t => { if (t.special) queue.push(t); });
+  if (forced) forced.forEach((col, t) => { kill.add(t); if (!queue.includes(t)) queue.push(t); target.set(t, col); });
+  const add = x => { if (x && !kill.has(x)) { kill.add(x); if (x.special) queue.push(x); } };
+  while (queue.length) {
+    const t = queue.shift();
+    if (seen.has(t)) continue;
+    seen.add(t); fired.push(t);
+    if (t.special === "bomb") { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) add(g[t.r + dr] && g[t.r + dr][t.c + dc]); }
+    else { const col = target.has(t) && target.get(t) !== null ? target.get(t) : t.color; g.forEach(row => row.forEach(x => { if (x && x.color === col) add(x); })); }
+  }
+  return fired;
+}
+
+// Works out what one round of clearing does, without changing anything.
+function planStep(g, petColor, swapped = [], forced = null) {
+  const runs = runsIn(g), kill = new Set(), born = new Map();
+  runs.forEach(run => {
+    run.cells.forEach(t => kill.add(t));
+    const n = run.cells.length;
+    if (n >= 4) {
+      const cand = run.cells.filter(t => !t.special);
+      const pick = cand.find(t => swapped.includes(t)) || cand[Math.floor(cand.length / 2)];
+      if (pick && !born.has(pick)) born.set(pick, n >= 5 ? "star" : "bomb");
+    }
+  });
+  const fired = expandIn(g, kill, forced);
+  born.forEach((_, t) => kill.delete(t)); // the new power-up stays on the board
+  let dmg = 0;
+  kill.forEach(t => { if (t.color === petColor) dmg += 5; });
+  runs.forEach(run => { if (run.color === petColor) { const n = run.cells.length; dmg += n === 4 ? 10 : n >= 5 ? 25 : 0; } });
+  return { runs, kill, born, fired, dmg };
 }
 
 function swapCells(a, b) {
@@ -195,6 +235,7 @@ function hasMoves() {
       const r2 = r + dr, c2 = c + dc;
       if (r2 >= N || c2 >= N) continue;
       const a = grid[r][c], b = grid[r2][c2];
+      if (a.special || b.special) return true;
       grid[r][c] = b; grid[r2][c2] = a;
       const ok = lineAt(r, c) || lineAt(r2, c2);
       grid[r][c] = a; grid[r2][c2] = b;
@@ -250,30 +291,33 @@ async function attack(from, amount) {
   a.classList.remove("lunge"); b.classList.remove("hit");
 }
 
-async function resolve() {
+function makeSpecial(t, type) {
+  t.special = type;
+  t.el.classList.remove("bomb", "star");
+  t.el.classList.add(type, "born");
+  setTimeout(() => t.el.classList.remove("born"), 800);
+}
+
+async function resolve(swapped = [], forced = null) {
   const color = chosen[turn].color;
-  let chain = 0, total = 0;
+  let chain = 0, total = 0, first = true;
   for (;;) {
-    const runs = findRuns();
-    if (!runs.length) break;
+    const plan = planStep(grid, color, first ? swapped : [], first ? forced : null);
+    first = false;
+    if (!plan.runs.length && !plan.fired.length) break;
     chain++;
-    let dmg = 0;
-    const kill = new Set();
-    runs.forEach(run => {
-      run.cells.forEach(t => kill.add(t));
-      if (run.color === color) {
-        const n = run.cells.length;
-        dmg += n * 5 + (n === 4 ? 10 : n >= 5 ? 25 : 0);
-      }
-    });
-    dmg = Math.round(dmg * (1 + 0.5 * (chain - 1)));
-    kill.forEach(t => t.el.classList.add("pop"));
-    SFX.play("pop", chain - 1);
+    const dmg = Math.round(plan.dmg * (1 + 0.5 * (chain - 1)));
+    plan.kill.forEach(t => t.el.classList.add("pop"));
     const sz = board.clientWidth / N;
-    kill.forEach(t => burst((t.c + 0.5) * sz, (t.r + 0.5) * sz, COLORS[t.color][0], 9));
+    const bombs = plan.fired.filter(t => t.special === "bomb"), stars = plan.fired.filter(t => t.special === "star");
+    SFX.play("pop", chain - 1);
+    plan.kill.forEach(t => burst((t.c + 0.5) * sz, (t.r + 0.5) * sz, COLORS[t.color][0], stars.length ? 14 : 9));
+    if (bombs.length) { SFX.play("boom"); shakeScreen(2); bombs.forEach(t => burst((t.c + 0.5) * sz, (t.r + 0.5) * sz, "#ffb300", 26, 420)); showBanner("BOOM!", 800); }
+    if (stars.length) { SFX.play("power"); shakeScreen(3); showBanner("STAR POWER!", 1000); }
     if (chain >= 2) { showBanner("CHAIN x" + chain + "!", 900); SFX.play("combo", chain); }
     await sleep(260);
-    kill.forEach(t => { grid[t.r][t.c] = null; t.el.remove(); });
+    plan.kill.forEach(t => { grid[t.r][t.c] = null; t.el.remove(); });
+    plan.born.forEach((type, t) => { makeSpecial(t, type); SFX.play("spark"); });
     if (dmg > 0) { total += dmg; attack(turn, dmg); }
     await gravity();
     if (hp[1 - turn] <= 0) break;
@@ -309,7 +353,8 @@ async function trySwap(a, b, remote = false) {
   SFX.play("swap");
   swapCells(a, b);
   await sleep(220);
-  if (!findRuns().length) {
+  const special = !!(a.special || b.special); // a power-up can always be swapped
+  if (!findRuns().length && !special) {
     swapCells(a, b);
     SFX.play("nope");
     a.el.classList.add("nope"); b.el.classList.add("nope");
@@ -320,7 +365,10 @@ async function trySwap(a, b, remote = false) {
     return;
   }
   if (online && !remote && onMoveHook) onMoveHook(ar, ac, br, bc);
-  const total = await resolve();
+  const forced = new Map();
+  if (a.special) forced.set(a, b.color);
+  if (b.special) forced.set(b, a.color);
+  const total = await resolve([a, b], forced);
   await sleep(350);
   if (hp[1 - turn] <= 0) return finish(turn);
   $("hint").textContent = total > 0 ? "" : "No " + chosen[turn].color + " match, so no damage!";
@@ -328,6 +376,7 @@ async function trySwap(a, b, remote = false) {
   turn = 1 - turn;
   updateTurn();
   busy = false;
+  if (ai && turn === 1 && !gameOver) aiMove();
 }
 
 // ---------- input ----------
@@ -343,10 +392,10 @@ const tileOf = e => {
 };
 
 let drag = null;
-const myTurn = () => !online || turn === online.seat;
+const myTurn = () => ai ? turn === 0 : (!online || turn === online.seat);
 board.addEventListener("pointerdown", e => {
   if (busy || gameOver) return;
-  if (!myTurn()) { $("hint").textContent = "Wait for your friend's move."; return; }
+  if (!myTurn()) { $("hint").textContent = ai ? "The computer is thinking…" : "Wait for your friend's move."; return; }
   const t = tileOf(e);
   if (!t) return;
   if (selected && selected !== t && adjacent(selected, t)) { trySwap(selected, t); return; }
@@ -404,6 +453,7 @@ function picker(step, text, taken, onPick) {
 }
 
 function showSelect(step) {
+  ai = null;
   picker(step, step === 0
     ? "Your pet's colour is the block colour <b>you</b> need to match to hurt the enemy."
     : "P1 picked <b>" + chosen[0].name + "</b>. Now P2, pick a different pet.",
@@ -412,12 +462,12 @@ function showSelect(step) {
 }
 
 function showMenu() {
-  online = null; onMoveHook = null; gameOver = true;
+  online = null; onMoveHook = null; ai = null; gameOver = true;
   updateTurn();
   modal("Pet Puzzle Battle",
     "Two players take turns. First, each player picks a pet. Your pet's colour is the block colour you need to match.<br>Swipe a block to swap it with its neighbour and make a line of 3 or more.<br><b>Only your pet's colour hurts the enemy.</b> Bigger lines and chain reactions hit harder!",
     [...(typeof savedRoom === "function" && savedRoom() ? [{ label: "Rejoin room " + savedRoom().code, fn: () => rejoinRoom(savedRoom()) }] : []),
-     { label: "Play on this device", fn: () => showSelect(0) }, { label: "Play online", alt: true, fn: () => onlineMenu() }]);
+     { label: "Play on this device", fn: () => showSelect(0) }, { label: "Play the computer", fn: () => vsComputer() }, { label: "Play online", alt: true, fn: () => onlineMenu() }]);
 }
 
 function finish(winner) {
@@ -427,6 +477,7 @@ function finish(winner) {
   SFX.play("win");
   shakeScreen(3);
   if (online) return onlineFinish(winner);
+  if (ai) return aiFinish(winner);
   modal("P" + (winner + 1) + " wins!", chosen[winner].name + " is the champion. Play again?", [{ label: "Choose pets again", fn: () => showSelect(0) }]);
 }
 
@@ -464,7 +515,7 @@ function intro() {
 buildPanels();
 updateHP();
 newBoard();
-$("btn-restart").addEventListener("click", () => { SFX.play("click"); if (online) leaveOnline(); else showSelect(0); });
+$("btn-restart").addEventListener("click", () => { SFX.play("click"); if (online) leaveOnline(); else if (ai) vsComputer(); else showSelect(0); });
 SFX.bindButton($("btn-sound"));
 window.addEventListener("resize", sizeFx);
 sizeFx();

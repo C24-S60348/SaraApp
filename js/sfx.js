@@ -65,6 +65,9 @@ const SFX = (() => {
     intro: () => { noise({ t: 0.8, vol: 0.18, from: 250, to: 4500 }); [0, 7, 12].forEach((s, i) => tone({ f: note(s), t: 0.5, type: "triangle", vol: 0.1, at: 0.5 + i * 0.02 })); },
     go: () => { tone({ f: note(12), t: 0.35, type: "square", vol: 0.1 }); tone({ f: note(19), t: 0.4, type: "triangle", vol: 0.15, at: 0.08 }); noise({ t: 0.3, vol: 0.12, from: 800, to: 6000 }); },
     rewind: () => { tone({ f: 900, to: 220, t: 0.45, type: "triangle", vol: 0.16 }); noise({ t: 0.45, vol: 0.1, from: 4200, to: 400 }); tone({ f: 660, t: 0.12, type: "sine", vol: 0.12, at: 0.45 }); },
+    boom: () => { noise({ t: 0.5, vol: 0.32, from: 1400, to: 70 }); tone({ f: 130, to: 38, t: 0.45, type: "sine", vol: 0.4 }); },
+    power: () => { [0, 4, 7, 12, 16, 19].forEach((s, i) => tone({ f: note(s + 12), t: 0.22, type: "triangle", vol: 0.14, at: i * 0.05 })); noise({ t: 0.6, vol: 0.18, from: 400, to: 7000 }); },
+    spark: () => { tone({ f: 700, to: 1500, t: 0.18, type: "sine", vol: 0.16 }); tone({ f: 1500, t: 0.12, type: "triangle", vol: 0.08, at: 0.12 }); },
     danger: () => tone({ f: 110, to: 90, t: 0.18, type: "sawtooth", vol: 0.16 }),
     win: () => [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => tone({ f: note(s), t: 0.3, type: "triangle", vol: 0.16, at: i * 0.1 })),
     lose: () => [7, 4, 0, -5].forEach((s, i) => tone({ f: note(s), t: 0.4, type: "sawtooth", vol: 0.12, at: i * 0.2 }))
