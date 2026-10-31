@@ -138,7 +138,7 @@ function hostLobby() {
   if (online.friendHere) buttons.unshift({ label: "Start game", fn: hostBegin });
   netModal("Room " + online.code, 'Share this code with your friend:<span class="code">' + online.code + "</span>" +
     (online.friendHere ? "<b>Your friend joined!</b> Press Start when you are both ready." : "Waiting for them to join…") +
-    "<br><small>Level: " + LEVELS[online.level].name + "</small>", buttons);
+    "<br><small>Level " + (online.level + 1) + " · " + LEVELS[online.level].name + "</small>", buttons);
 }
 
 // ---------- host ----------

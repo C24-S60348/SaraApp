@@ -2,8 +2,8 @@ const W = 1280, H = 640, R = 17, S = R * 2;
 const COLORS = [
   ["#ff8a80", "#c62828"], ["#82b1ff", "#1565c0"], ["#a5e8a0", "#2e7d32"], ["#fff59d", "#f9a825"], ["#ce93d8", "#6a1b9a"]
 ];
-let TOTAL_BALLS = 80, baseSpeed = 26;
-const RUSH_SPEED = 190, CLOSE_SPEED = 560, BACK_SPEED = 520;
+let TOTAL_BALLS = 80, baseSpeed = 26, chainSpeed = 0;
+const RUSH_SPEED = 270, CLOSE_SPEED = 560, BACK_SPEED = 520;
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -51,6 +51,32 @@ function heartWay() {
   }
   return out;
 }
+// Straight lines joined by rounded corners (used for the column and square-spiral levels).
+function densify(p, step) {
+  const out = [p[0]];
+  for (let i = 1; i < p.length; i++) {
+    const [x0, y0] = p[i - 1], [x1, y1] = p[i], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / step));
+    for (let k = 1; k <= n; k++) out.push([x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n]);
+  }
+  return out;
+}
+function filletWay(P, r) {
+  const out = [P[0]];
+  for (let i = 1; i < P.length - 1; i++) {
+    const [ax, ay] = P[i - 1], [bx, by] = P[i], [cx, cy] = P[i + 1];
+    const l1 = Math.hypot(bx - ax, by - ay), l2 = Math.hypot(cx - bx, cy - by), d = Math.min(r, l1 / 2, l2 / 2);
+    const t1 = [bx - (bx - ax) / l1 * d, by - (by - ay) / l1 * d], t2 = [bx + (cx - bx) / l2 * d, by + (cy - by) / l2 * d];
+    out.push(t1);
+    for (let k = 1; k < 12; k++) { const u = k / 12; out.push([(1 - u) * (1 - u) * t1[0] + 2 * (1 - u) * u * bx + u * u * t2[0], (1 - u) * (1 - u) * t1[1] + 2 * (1 - u) * u * by + u * u * t2[1]]); }
+    out.push(t2);
+  }
+  out.push(P[P.length - 1]);
+  return densify(out, 8);
+}
+const bambooWay = () => filletWay([[340, -50], [340, 530], [490, 530], [490, 90], [640, 90], [640, 530], [790, 530], [790, 90], [940, 90], [940, 470]], 60);
+const squareSpiralWay = () => filletWay([[330, -50], [330, 560], [950, 560], [950, 60], [430, 60], [430, 460], [850, 460], [850, 160], [530, 160], [530, 360], [740, 360]], 45);
+const zigzagWay = () => densify(catmull([[1000, -50], [1000, 60], [840, 190], [680, 60], [520, 190], [360, 60], [315, 200], [360, 340], [520, 470], [680, 340], [840, 470], [930, 560], [700, 575]]), 8);
+
 function waveWay() {
   const out = [];
   for (let y = -50; y <= 560; y += 6) out.push([640 + 250 * Math.sin((y + 50) / 330 * 6.283), y]);
@@ -60,28 +86,43 @@ function waveWay() {
 const LEVELS = [
   {
     name: "Jungle Snake", desc: "A lazy S-curve. A good warm-up.", way: [[620, -50], [620, 70], [850, 105], [905, 250], [700, 318], [425, 268], [335, 395], [520, 495], [750, 478], [815, 365], [655, 385]],
-    balls: 80, speed: 26,
+    balls: 30, speed: 24,
     theme: { bg: ["#2f7d3a", "#1d5a2c", "#0d2d17"], blob: [40, 120, 60], leaf: "rgba(200,255,200,.14)", track: ["#3b2a20", "#6d4c41", "#a1887f", "#6b4a3d", "#4e342e"], pebble: ["#d7ccc8", "#efebe9"], plat: ["#6aa84f", "#3b7a37"] }
   },
   {
-    name: "Desert Spiral", desc: "The chain spirals in to the skull. Long and tricky.", way: spiralWay(), dense: true,
-    balls: 90, speed: 25,
-    theme: { bg: ["#f5d68e", "#d9a85a", "#8a5a2a"], blob: [210, 160, 90], leaf: "rgba(255,240,200,.28)", track: ["#4a3320", "#7a5a3a", "#c9a779", "#8a6a45", "#5d432b"], pebble: ["#fff3d6", "#e8cfa0"], plat: ["#d8b777", "#a98242"] }
+    name: "Ocean Waves", desc: "Big smooth waves from top to bottom.", way: waveWay(), dense: true,
+    balls: 34, speed: 26,
+    theme: { bg: ["#27b5d4", "#0c6e9a", "#063a5e"], blob: [60, 190, 220], leaf: "rgba(200,245,255,.3)", track: ["#2d4a3a", "#8d7a52", "#e8d9a8", "#b9a56f", "#7a6a42"], pebble: ["#fff8e1", "#f0e0b0"], plat: ["#4fc3d8", "#1d8bb0"] }
   },
   {
-    name: "Ice Switchbacks", desc: "Five long sweeps from side to side.", way: switchbackWay(), dense: true,
-    balls: 90, speed: 28,
+    name: "Ice Switchbacks", desc: "Straight left, straight right, all the way down.", way: switchbackWay(), dense: true,
+    balls: 38, speed: 27,
     theme: { bg: ["#d8f1fe", "#8cc9ee", "#2d6fa3"], blob: [150, 205, 240], leaf: "rgba(255,255,255,.55)", track: ["#1f4b6e", "#4b86b4", "#dff2fc", "#8fc0e0", "#4a7fa8"], pebble: ["#ffffff", "#d4ecfa"], plat: ["#bfe3f7", "#7fb6d8"] }
   },
   {
-    name: "Candy Heart", desc: "Follow the heart. Sharp turns at the bottom.", way: heartWay(), dense: true,
-    balls: 70, speed: 28,
+    name: "Zigzag Canyon", desc: "Sharp zigzags across, then back again.", way: zigzagWay(), dense: true,
+    balls: 42, speed: 28,
+    theme: { bg: ["#e0875a", "#a8492b", "#4a1a12"], blob: [220, 120, 80], leaf: "rgba(255,210,170,.22)", track: ["#3a1c12", "#7a3b24", "#e0a77f", "#a8643f", "#5e2d1b"], pebble: ["#ffe3cc", "#f2c4a3"], plat: ["#e39a6c", "#b5603a"] }
+  },
+  {
+    name: "Candy Heart", desc: "Follow the heart. Sharp turn at the bottom.", way: heartWay(), dense: true,
+    balls: 46, speed: 28,
     theme: { bg: ["#ffd9ec", "#f59ac8", "#8f2d6a"], blob: [255, 160, 210], leaf: "rgba(255,230,245,.45)", track: ["#5a1f45", "#9c4a7b", "#f3b8d8", "#c97aa8", "#7a3560"], pebble: ["#fff0f8", "#ffd0e8"], plat: ["#f7b2d6", "#d4709f"] }
   },
   {
-    name: "Ocean Waves", desc: "Big waves, and the balls come fast!", way: waveWay(), dense: true,
-    balls: 70, speed: 33,
-    theme: { bg: ["#27b5d4", "#0c6e9a", "#063a5e"], blob: [60, 190, 220], leaf: "rgba(200,245,255,.3)", track: ["#2d4a3a", "#8d7a52", "#e8d9a8", "#b9a56f", "#7a6a42"], pebble: ["#fff8e1", "#f0e0b0"], plat: ["#4fc3d8", "#1d8bb0"] }
+    name: "Bamboo Columns", desc: "Straight up, straight down, five times.", way: bambooWay(), dense: true,
+    balls: 50, speed: 29,
+    theme: { bg: ["#c9e8a0", "#7fb04f", "#2f5a1c"], blob: [150, 200, 100], leaf: "rgba(230,255,200,.35)", track: ["#2c3b16", "#5f7a2c", "#e5f0b0", "#a4bf5a", "#4e6a22"], pebble: ["#f6ffd8", "#dcefa8"], plat: ["#a8d26b", "#6f9a3a"] }
+  },
+  {
+    name: "Desert Spiral", desc: "The chain spirals in to the skull.", way: spiralWay(), dense: true,
+    balls: 55, speed: 30,
+    theme: { bg: ["#f5d68e", "#d9a85a", "#8a5a2a"], blob: [210, 160, 90], leaf: "rgba(255,240,200,.28)", track: ["#4a3320", "#7a5a3a", "#c9a779", "#8a6a45", "#5d432b"], pebble: ["#fff3d6", "#e8cfa0"], plat: ["#d8b777", "#a98242"] }
+  },
+  {
+    name: "Square Spiral", desc: "Straight lines and square corners, round and round.", way: squareSpiralWay(), dense: true,
+    balls: 60, speed: 31,
+    theme: { bg: ["#5b3fb3", "#2c1d6b", "#0e0a2a"], blob: [110, 80, 200], leaf: "rgba(220,210,255,.22)", track: ["#140c35", "#3a2a7a", "#c9bdf5", "#7c69c9", "#2d2163"], pebble: ["#ffffff", "#d9d0ff"], plat: ["#7e64d6", "#4a35a0"] }
   }
 ];
 LEVELS.forEach(L => {
@@ -231,7 +272,7 @@ function resetShooters() {
 }
 function resetGame() {
   chain = []; headD = 0; spawned = 0; projectiles = []; join = null; combo = 0; bursts = []; time = 0;
-  particles = []; texts = []; comboBanner = null; rewind = 0; streak = 0; timeBanner = null; shake = 0; danger = 0; touches.clear(); touchAim = null;
+  particles = []; texts = []; comboBanner = null; chainSpeed = RUSH_SPEED; rewind = 0; streak = 0; timeBanner = null; shake = 0; danger = 0; touches.clear(); touchAim = null;
   resetShooters();
 }
 function chainColors() {
@@ -245,6 +286,9 @@ function show(id) {
 }
 function toMenu() { pickingOnline = false; resetGame(); state = "menu"; show("ov-menu"); }
 let levelIndex = 0;
+const UNLOCK_KEY = "saraapp-zuma-unlocked";
+function unlockedCount() { try { return Math.max(1, Math.min(LEVELS.length, +localStorage.getItem(UNLOCK_KEY) || 1)); } catch (e) { return 1; } }
+function unlockUpTo(n) { try { if (n > unlockedCount()) localStorage.setItem(UNLOCK_KEY, String(Math.min(n, LEVELS.length))); } catch (e) { /* ignore */ } refreshLevelCards(); }
 function chooseLevel(i) { levelIndex = i; setLevel(LEVELS[i]); resetGame(); state = "mode"; show("ov-mode"); }
 function startGame(m) {
   mode = m;
@@ -434,6 +478,9 @@ function insertShot(p, hitIdx) {
   const ball = chain[hitIdx], bp = posAt(ball.d), t = tangentAt(ball.d);
   const ahead = (p.x - (bp[0] + ball.ox)) * t[0] + (p.y - (bp[1] + ball.oy)) * t[1] > 0;
   const idx = ahead ? hitIdx : hitIdx + 1;
+  // The new ball pushes the balls in FRONT of it forward; the balls behind stay where they are.
+  // (If it makes a match, removeRange then rolls the front back, so only a match moves the chain back.)
+  headD += S;
   const target = headD - idx * S, tp = posAt(target);
   chain.splice(idx, 0, { id: ballId++, color: p.color, d: target, ox: p.x - tp[0], oy: p.y - tp[1] });
   join = null; combo = 0;
@@ -491,7 +538,13 @@ function update(dt) {
     const step = Math.min(rewind, REWIND_SPEED * dt, Math.max(0, headD));
     rewind -= step > 0 ? step : rewind; // nothing left to roll back
     moveChain(dt, -step / dt);
-  } else moveChain(dt, spawned < 14 ? RUSH_SPEED : baseSpeed);
+  } else {
+    // At the start, about half of the balls rush out quickly, then the chain slows down to its normal speed.
+    const head = chain.length ? chain[0].d : 0;
+    const rushing = spawned < Math.ceil(TOTAL_BALLS * 0.5) && head < PATH_LEN * 0.42;
+    chainSpeed += ((rushing ? RUSH_SPEED : baseSpeed) - chainSpeed) * Math.min(1, dt * 2.5);
+    moveChain(dt, chainSpeed);
+  }
 
   // gap closed? check for a new match where the two halves meet
   if (join !== null) {
@@ -538,11 +591,12 @@ function showEnd(win, a, b) {
   shake = win ? 6 : 16;
   SFX.play(win ? "win" : "lose");
   for (let i = 0; i < 70; i++) sparks(W / 2 + (Math.random() - .5) * 600, H / 2 + (Math.random() - .5) * 300, win ? COLORS[i % 5][0] : "#ff8a80", 1);
-  const net = !!online;
-  $("btn-next").hidden = net || !(win && levelIndex < LEVELS.length - 1);
+  const net = !!online, host = net && online.role === "host";
+  if (win && (!net || host)) unlockUpTo(levelIndex + 2);
+  $("btn-next").hidden = !(win && levelIndex < LEVELS.length - 1 && (!net || host));
   $("btn-again").hidden = net && online.role === "guest";
   $("btn-levels").textContent = net ? "Leave" : "Levels";
-  $("over-title").textContent = win ? "You cleared the chain!" : "The chain reached the skull!";
+  $("over-title").textContent = win ? "Level " + (levelIndex + 1) + " cleared!" : "The chain reached the skull!";
   const lead = a === b ? "It is a tie." : (a > b ? "P1 scored more." : "P2 scored more.");
   $("over-text").innerHTML = `${win ? "Great teamwork!" : "Try again together."}<br><b style="color:#90caf9">P1: ${a}</b> &nbsp;·&nbsp; <b style="color:#ef9a9a">P2: ${b}</b><br>Team total: ${a + b}<br>${lead}` + (net && online.role === "guest" ? "<br><i>Waiting for the host to play again…</i>" : "");
   setTimeout(() => { if (state === "over") show("ov-over"); }, 700);
@@ -652,7 +706,25 @@ function drawZones(alpha) {
   ctx.restore();
 }
 
+const rrect = (x, y, w, h, r) => (ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h)); // older Safari has no roundRect
+function drawReleaseBar() {
+  const bw = 340, bh = 12, x = W / 2 - bw / 2, y = 30, f = TOTAL_BALLS ? Math.min(1, spawned / TOTAL_BALLS) : 0, done = f >= 1;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,.45)";
+  ctx.beginPath(); rrect(x - 12, 6, bw + 24, 50, 14); ctx.fill();
+  ctx.font = "bold 13px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff";
+  ctx.fillText("LEVEL " + (levelIndex + 1) + " · " + LEVEL.name.toUpperCase(), W / 2, 18);
+  ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.beginPath(); rrect(x, y, bw, bh, 6); ctx.fill();
+  const g = ctx.createLinearGradient(x, 0, x + bw, 0);
+  g.addColorStop(0, "#69f0ae"); g.addColorStop(0.6, "#ffd740"); g.addColorStop(1, "#ff5252");
+  ctx.fillStyle = g; ctx.beginPath(); rrect(x, y, Math.max(bh, bw * f), bh, 6); ctx.fill();
+  ctx.font = "11px system-ui,sans-serif"; ctx.fillStyle = "rgba(255,255,255,.85)";
+  ctx.fillText(done ? "All balls are out! Clear the rest" : spawned + " / " + TOTAL_BALLS + " balls out", W / 2, y + bh + 8);
+  ctx.restore();
+}
+
 function drawHud() {
+  if (state === "play" || state === "intro") drawReleaseBar();
   ctx.textBaseline = "middle";
   const [a, b] = shooters;
   ctx.font = "bold 24px system-ui,sans-serif";
@@ -756,12 +828,19 @@ function buildLevelCards() {
     x.fillStyle = "#111"; x.strokeStyle = "#ffca28"; x.lineWidth = 2; x.beginPath(); x.arc(hx * k, hy * k, 8, 0, 6.28); x.fill(); x.stroke();
     [[150, "#42a5f5"], [1130, "#ef5350"]].forEach(([px, col]) => { x.fillStyle = col; x.beginPath(); x.arc(px * k, 320 * k, 8, 0, 6.28); x.fill(); });
     card.append(c);
-    const t = document.createElement("b"); t.textContent = (i + 1) + ". " + L.name;
+    const t = document.createElement("b"); t.textContent = "Level " + (i + 1);
+    const n = document.createElement("em"); n.textContent = L.name;
     const d = document.createElement("span"); d.textContent = L.desc;
-    card.append(t, d);
-    card.addEventListener("click", () => { SFX.play("click"); if (pickingOnline) onlineCreate(i); else chooseLevel(i); });
+    const lock = document.createElement("i"); lock.className = "lock"; lock.textContent = "Locked · clear level " + i + " first";
+    card.append(t, n, d, lock);
+    card.addEventListener("click", () => { if (i >= unlockedCount()) { SFX.play("nope"); return; } SFX.play("click"); if (pickingOnline) onlineCreate(i); else chooseLevel(i); });
     box.append(card);
   });
+  refreshLevelCards();
+}
+function refreshLevelCards() {
+  const open = unlockedCount();
+  document.querySelectorAll("#levels .level").forEach((c, i) => { c.classList.toggle("locked", i >= open); c.setAttribute("aria-disabled", i >= open); });
 }
 buildLevelCards();
 
@@ -769,7 +848,10 @@ $("btn-play").addEventListener("click", () => { SFX.play("click"); state = "leve
 $("mode-keys").addEventListener("click", () => startGame("keys"));
 $("mode-touch").addEventListener("click", () => startGame("touch"));
 $("btn-again").addEventListener("click", () => { if (online) onlineAgain(); else startGame(mode); });
-$("btn-next").addEventListener("click", () => { chooseLevel(levelIndex + 1); startGame(mode); });
+$("btn-next").addEventListener("click", () => {
+  if (online) { online.level = levelIndex + 1; return onlineAgain(); }
+  chooseLevel(levelIndex + 1); startGame(mode);
+});
 $("btn-levels").addEventListener("click", () => { SFX.play("click"); if (online) return leaveOnline(); resetGame(); state = "level"; show("ov-level"); });
 $("btn-menu").addEventListener("click", () => { SFX.play("click"); if (online) leaveOnline(); else toMenu(); });
 $("btn-online").addEventListener("click", () => { SFX.play("click"); onlineMenu(); });

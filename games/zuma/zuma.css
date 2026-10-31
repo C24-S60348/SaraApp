@@ -47,3 +47,10 @@ kbd { background:#fff; color:#14351f; border-radius:5px; padding:0 .4rem; font-w
 .toast { position:fixed; top:.6rem; left:50%; transform:translateX(-50%); z-index:30; background:#ffb300; color:#3b2a00; font-weight:700; padding:.5rem 1.1rem; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.4); }
 .toast[hidden] { display:none; }
 .btns .go { font-size:1.1rem; padding:.65rem 1.8rem; }
+
+.level em { font-style:normal; font-size:.8rem; color:#ffe082; font-weight:700; }
+.level .lock { display:none; font-style:normal; font-size:.75rem; font-weight:700; color:#ffcc80; }
+.level.locked { cursor:not-allowed; filter:grayscale(.9) brightness(.6); }
+.level.locked:hover { transform:none; border-color:rgba(255,255,255,.25); }
+.level.locked .lock { display:block; }
+.level.locked span { display:none; }
