@@ -14,6 +14,8 @@ window.APPS = [
       { t: "Works in portrait and landscape", done: true },
       { t: "Plants that grow inside the dirt (carrot, sweet potato)", done: true },
       { t: "More plants: bayam, lobak merah, ubi keledek", done: true },
+      { t: "Belajar Menanam: 8 chapters x 4 tahap (lesson + 5-question quiz), stars, unlocking, plant grows", done: true },
+      { t: "Kuiz 2 Pemain: choose a plant AND a tahap (next step)", done: false },
       { t: "Kuiz 2 Pemain: plants grow with each right answer", done: true },
       { t: "Kuiz: one level per plant + Asas Menanam + Campuran Semua (9 levels), 20 questions each, 8 picked at random every game", done: true },
       { t: "Kuiz admin page: list of all 160 questions and answers, filter and search, password lock, opened from the gear (Tetapan) on Tanam Tanam", done: true },

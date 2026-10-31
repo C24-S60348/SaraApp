@@ -53,3 +53,6 @@ Press "Play online" in the game. The player who creates the room is the host: th
 
 ## Kuiz Tanam (Tanam Tanam quiz)
 `games/tanam/kuiz.html` (button "Kuiz 2 Pemain" on the Tanam Tanam menu). Questions are in `games/tanam/kuiz-data.js` (one bank of 20 per plant): the first answer of each question is the right one (the game shuffles them). The admin list is `games/tanam/kuiz-admin.html`. Online rooms live under `tanamRooms` in Firebase, so the rules in `firebase.rules.json` must include it.
+
+## Belajar Menanam (learning path)
+`games/tanam/belajar.html`, opened by the "Main" button on Tanam Tanam. Lessons and which questions belong to each tahap are in `games/tanam/belajar-data.js`. Stars are saved in the browser; the gear (Tetapan) has "Padam kemajuan belajar" to reset them.

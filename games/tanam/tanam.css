@@ -83,3 +83,9 @@ ol { padding-left:1.3rem; margin:0; } ol li { margin-bottom:.45rem; }
 .set-item:hover { background:#e3f2d9; }
 .set-item small { color:var(--muted); }
 .set-close { font:inherit; font-weight:700; border:0; border-radius:999px; padding:.55rem 1rem; background:#e0e0e0; cursor:pointer; align-self:flex-end; }
+
+a.play { display:inline-block; text-decoration:none; }
+.menu-more { display:flex; flex-wrap:wrap; gap:.8rem; justify-content:center; margin-top:1rem; }
+.play.small, .menu-more .quizbtn { font-size:1.05rem; padding:.6rem 1.6rem; margin-top:0; }
+.play.small { background:linear-gradient(180deg,#81c784,#43a047); box-shadow:0 6px 0 #2e7d32, 0 12px 20px rgba(0,0,0,.15); }
+button.set-item { font:inherit; text-align:left; border:0; cursor:pointer; }

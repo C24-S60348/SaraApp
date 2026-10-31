@@ -23,6 +23,11 @@ $("btn-back").addEventListener("click", () => history.back());
 // settings (gear, top right)
 $("btn-settings").addEventListener("click", () => { $("settings").hidden = false; });
 $("settings-close").addEventListener("click", () => { $("settings").hidden = true; });
+$("reset-progress").addEventListener("click", () => {
+  if (!confirm("Padam semua bintang dan tahap di peranti ini?")) return;
+  try { localStorage.removeItem("tanam-belajar"); } catch (e) { /* ignore */ }
+  $("settings").hidden = true;
+});
 $("settings").addEventListener("click", e => { if (e.target.id === "settings") $("settings").hidden = true; });
 
 // ---- pilih tanaman ----
