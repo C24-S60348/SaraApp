@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kuiz Tanam · SaraApp</title>
+  <link rel="stylesheet" href="tanam.css">
+  <link rel="stylesheet" href="kuiz.css">
+</head>
+<body class="kuiz">
+  <div class="topbar">
+    <a class="pill" href="index.html">Tanam Tanam</a>
+    <span class="right">
+      <button class="pill" id="btn-sound" type="button"></button>
+      <button class="pill" id="btn-menu" type="button">Menu</button>
+    </span>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+
+  <main class="arena" id="arena">
+    <section class="side" id="side-0"></section>
+    <section class="side" id="side-1"></section>
+  </main>
+
+  <div class="count" id="count" hidden></div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2 id="ov-title"></h2>
+      <div id="ov-text"></div>
+      <div class="picks" id="ov-picks"></div>
+      <div class="extra" id="ov-extra"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="../../js/sfx.js"></script>
+  <script src="plants.js"></script>
+  <script src="kuiz-data.js"></script>
+  <script src="kuiz.js"></script>
+</body>
+</html>

@@ -15,6 +15,13 @@
         ".write": true,
         ".validate": "$code.matches(/^[A-Z0-9]{4}$/) && newData.hasChildren()"
       }
+    },
+    "tanamRooms": {
+      "$code": {
+        ".read": true,
+        ".write": true,
+        ".validate": "$code.matches(/^[A-Z0-9]{4}$/) && newData.hasChildren()"
+      }
     }
   }
 }

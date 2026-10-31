@@ -50,3 +50,6 @@ Press "Play online" in the game. The player who creates the room is the host: th
 ## Elements and Bingo
 - `apps/elements/` : a glowing card carousel with live fire / lotus / sun / wind effects.
 - `bingo/` : the Festival of Lights Bingo card generator (your own file, unchanged). It has no link back to SaraApp, so you can share its link on its own: `/SaraApp/bingo/`.
+
+## Kuiz Tanam (Tanam Tanam quiz)
+`games/tanam/kuiz.html` (button "Kuiz 2 Pemain" on the Tanam Tanam menu). Questions are in `games/tanam/kuiz-data.js`: the first answer of each question is the right one (the game shuffles them). Online rooms live under `tanamRooms` in Firebase, so the rules in `firebase.rules.json` must include it.

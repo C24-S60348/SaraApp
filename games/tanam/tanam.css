@@ -68,3 +68,6 @@ ol { padding-left:1.3rem; margin:0; } ol li { margin-bottom:.45rem; }
   .card-body p { display:none; }
 }
 #screen-menu[hidden] { display:none; } /* an ID rule sets display:flex, which was overriding the hidden attribute */
+
+.quizbtn { display:inline-block; margin-top:1rem; font-size:1.05rem; padding:.6rem 2rem; text-decoration:none; background:linear-gradient(180deg,#ffb74d,#f57c00); box-shadow:0 6px 0 #b85c00, 0 12px 20px rgba(0,0,0,.18); }
+.quizbtn:active { box-shadow:0 2px 0 #b85c00; }
