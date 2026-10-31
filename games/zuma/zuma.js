@@ -287,7 +287,8 @@ function show(id) {
 function toMenu() { pickingOnline = false; resetGame(); state = "menu"; show("ov-menu"); }
 let levelIndex = 0;
 const UNLOCK_KEY = "saraapp-zuma-unlocked";
-function unlockedCount() { try { return Math.max(1, Math.min(LEVELS.length, +localStorage.getItem(UNLOCK_KEY) || 1)); } catch (e) { return 1; } }
+const ALL_LEVELS_OPEN = true; // for now every level can be played; set to false to make levels unlock one by one again
+function unlockedCount() { if (ALL_LEVELS_OPEN) return LEVELS.length; try { return Math.max(1, Math.min(LEVELS.length, +localStorage.getItem(UNLOCK_KEY) || 1)); } catch (e) { return 1; } }
 function unlockUpTo(n) { try { if (n > unlockedCount()) localStorage.setItem(UNLOCK_KEY, String(Math.min(n, LEVELS.length))); } catch (e) { /* ignore */ } refreshLevelCards(); }
 function chooseLevel(i) { levelIndex = i; setLevel(LEVELS[i]); resetGame(); state = "mode"; show("ov-mode"); }
 function startGame(m) {
