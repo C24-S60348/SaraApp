@@ -29,18 +29,37 @@
     .opts span.ok { background:#c8e6c9; color:#1b5e20; font-weight:700; }
     .opts span.ok::before { content:"✓ "; }
     .note { background:#fff8e1; border-radius:14px; padding:.7rem 1rem; font-size:.9rem; color:#5d4a00; }
+    .lock { position:fixed; inset:0; z-index:50; background:#f3f8ef; display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .lock[hidden] { display:none; }
+    .lock form { background:#fff; border-radius:22px; padding:1.4rem 1.5rem; width:min(380px,100%); box-shadow:0 10px 40px rgba(30,80,40,.15); text-align:center; }
+    .lock h2 { margin:0 0 .4rem; color:var(--green); }
+    .lock input { font:inherit; width:100%; padding:.6rem .8rem; border-radius:12px; border:2px solid #c8e6c9; margin:.6rem 0; }
+    .lock button { font:inherit; font-weight:800; padding:.55rem 1.4rem; border-radius:999px; border:0; background:var(--green); color:#fff; cursor:pointer; }
+    .lock .err { color:#c62828; font-weight:700; min-height:1.3em; margin:.2rem 0 0; }
+    .lock a { display:block; margin-top:.8rem; color:var(--muted); font-size:.9rem; }
     @media print { .tools, .note { display:none; } section.bank { box-shadow:none; break-inside:avoid-page; } }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="lock" id="lock">
+    <form id="lock-form">
+      <h2>Admin</h2>
+      <p>Masukkan kata laluan untuk melihat senarai soalan.</p>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Kata laluan" required>
+      <button type="submit">Buka</button>
+      <p class="err" id="pw-err"></p>
+      <a href="index.html">Kembali ke Tanam Tanam</a>
+    </form>
+  </div>
+  <div class="wrap" id="wrap" hidden>
     <h1>Kuiz Tanam · Senarai soalan</h1>
     <p class="sub">Semua soalan dan jawapan yang betul (bertanda ✓). Setiap permainan memilih 8 soalan secara rawak daripada tahap yang dipilih.</p>
-    <p class="note">To add or change a question, edit <code>games/tanam/kuiz-data.js</code> (the first answer is always the right one), or ask Claude. This page only shows the questions; anyone who has the link can open it.</p>
+    <p class="note">To add or change a question, edit <code>games/tanam/kuiz-data.js</code> (the first answer is always the right one), or ask Claude. The password only hides this page: the questions are still inside the game files, so it is not a strong lock.</p>
     <div class="tools">
       <select id="bank"><option value="">Semua pokok</option></select>
       <input id="q" type="search" placeholder="Cari soalan atau jawapan…">
       <button type="button" onclick="window.print()">Cetak</button>
+      <button type="button" id="btn-lock">Kunci</button>
       <span class="stats" id="stats"></span>
     </div>
     <div id="list"></div>
@@ -67,7 +86,26 @@
     }
     $("bank").addEventListener("change", render);
     $("q").addEventListener("input", render);
-    render();
+
+    // Simple password lock. NOTE: this only hides the page. The questions are still inside kuiz-data.js,
+    // which anyone technical can open. Only the SHA-256 fingerprint of the password is stored here.
+    const ADMIN_HASH = "5e333e9424048693afcad5724ca0e06306e2aac72d9fb5901cedf2bcf4319f35";
+    const KEY = "tanam-admin-ok";
+    async function sha256(text) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    function unlock() { $("lock").hidden = true; $("wrap").hidden = false; render(); }
+    let ok = false;
+    try { ok = sessionStorage.getItem(KEY) === ADMIN_HASH; } catch (e) { /* ignore */ }
+    if (ok) unlock(); else $("pw").focus();
+    $("lock-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const h = await sha256($("pw").value);
+      if (h === ADMIN_HASH) { try { sessionStorage.setItem(KEY, h); } catch (err) { /* ignore */ } unlock(); }
+      else { $("pw-err").textContent = "Kata laluan salah."; $("pw").select(); }
+    });
+    $("btn-lock").addEventListener("click", () => { try { sessionStorage.removeItem(KEY); } catch (e) { /* ignore */ } location.reload(); });
   </script>
 </body>
 </html>

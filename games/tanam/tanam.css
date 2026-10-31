@@ -71,3 +71,15 @@ ol { padding-left:1.3rem; margin:0; } ol li { margin-bottom:.45rem; }
 
 .quizbtn { display:inline-block; margin-top:1rem; font-size:1.05rem; padding:.6rem 2rem; text-decoration:none; background:linear-gradient(180deg,#ffb74d,#f57c00); box-shadow:0 6px 0 #b85c00, 0 12px 20px rgba(0,0,0,.18); }
 .quizbtn:active { box-shadow:0 2px 0 #b85c00; }
+
+.topright { display:flex; gap:.5rem; }
+.pill.gear { padding:.4rem .55rem; display:inline-flex; align-items:center; }
+.pill.gear svg { width:20px; height:20px; fill:none; stroke:var(--ink); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.settings { position:fixed; inset:0; z-index:20; background:rgba(20,50,25,.45); display:flex; align-items:center; justify-content:center; padding:1rem; }
+.settings[hidden] { display:none; }
+.settings-card { background:#fff; border-radius:22px; padding:1.2rem 1.3rem; width:min(420px,100%); box-shadow:0 20px 60px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:.6rem; }
+.settings-card h2 { margin:0 0 .2rem; color:var(--green); }
+.set-item { display:flex; flex-direction:column; text-decoration:none; color:var(--ink); background:#f1f8e9; border-radius:14px; padding:.7rem .9rem; }
+.set-item:hover { background:#e3f2d9; }
+.set-item small { color:var(--muted); }
+.set-close { font:inherit; font-weight:700; border:0; border-radius:999px; padding:.55rem 1rem; background:#e0e0e0; cursor:pointer; align-self:flex-end; }

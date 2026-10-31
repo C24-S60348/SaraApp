@@ -9,7 +9,22 @@
 <body>
   <div class="topbar">
     <a class="pill" href="../../index.html">Home</a>
-    <button class="pill" id="btn-back" hidden>← Kembali</button>
+    <span class="topright">
+      <button class="pill" id="btn-back" hidden>← Kembali</button>
+      <button class="pill gear" id="btn-settings" type="button" aria-label="Tetapan" title="Tetapan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z"/><path d="M19.400 15a1.700 1.700 0 0 0 .3 1.800l.1.1a2 2 0 1 1-2.800 2.800l-.1-.1a1.700 1.700 0 0 0-1.800-.3 1.700 1.700 0 0 0-1 1.500V21a2 2 0 1 1-4 0v-.1a1.700 1.700 0 0 0-1.100-1.500 1.700 1.700 0 0 0-1.800.3l-.1.1a2 2 0 1 1-2.800-2.800l.1-.1a1.700 1.700 0 0 0 .3-1.800 1.700 1.700 0 0 0-1.500-1H3a2 2 0 1 1 0-4h.1a1.700 1.700 0 0 0 1.500-1.100 1.700 1.700 0 0 0-.3-1.800l-.1-.1a2 2 0 1 1 2.800-2.800l.1.1a1.700 1.700 0 0 0 1.800.3H9a1.700 1.700 0 0 0 1-1.500V3a2 2 0 1 1 4 0v.1a1.700 1.700 0 0 0 1 1.500 1.700 1.700 0 0 0 1.800-.3l.1-.1a2 2 0 1 1 2.800 2.800l-.1.1a1.700 1.700 0 0 0-.3 1.800V9a1.700 1.700 0 0 0 1.500 1H21a2 2 0 1 1 0 4h-.1a1.700 1.700 0 0 0-1.500 1z"/></svg>
+      </button>
+    </span>
+  </div>
+
+  <!-- settings panel -->
+  <div class="settings" id="settings" hidden>
+    <div class="settings-card" role="dialog" aria-labelledby="settings-title">
+      <h2 id="settings-title">Tetapan</h2>
+      <a class="set-item" href="kuiz-admin.html"><b>Senarai soalan kuiz</b><small>Untuk admin sahaja. Perlu kata laluan.</small></a>
+      <a class="set-item" href="kuiz.html"><b>Kuiz 2 Pemain</b><small>Main kuiz dengan rakan.</small></a>
+      <button class="set-close" id="settings-close" type="button">Tutup</button>
+    </div>
   </div>
 
   <!-- 1. Main menu -->

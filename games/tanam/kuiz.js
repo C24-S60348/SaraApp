@@ -80,7 +80,6 @@ function showMenu() {
   modal("Kuiz Tanam", "Dua pemain menjawab <b>" + QN + " soalan</b> tentang menanam. Setiap jawapan betul membuatkan pokok anda membesar.<br>Siapa paling banyak betul menang. Jika sama, yang lebih pantas menang!", [
     { label: "Main di peranti ini", fn: localStart },
     { label: "Main dalam talian", fn: onlineMenu },
-    { label: "Senarai soalan (admin)", alt: true, fn: () => { location.href = "kuiz-admin.html"; } },
     { label: "Kembali ke Tanam Tanam", alt: true, fn: () => { location.href = "index.html"; } }
   ]);
 }

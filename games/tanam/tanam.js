@@ -20,6 +20,10 @@ function show(name) {
 $("menu-art").innerHTML = plantSVG("bunga", 3);
 $("btn-play").addEventListener("click", () => { location.hash = "#pilih"; });
 $("btn-back").addEventListener("click", () => history.back());
+// settings (gear, top right)
+$("btn-settings").addEventListener("click", () => { $("settings").hidden = false; });
+$("settings-close").addEventListener("click", () => { $("settings").hidden = true; });
+$("settings").addEventListener("click", e => { if (e.target.id === "settings") $("settings").hidden = true; });
 
 // ---- pilih tanaman ----
 const grid = $("plant-grid");
