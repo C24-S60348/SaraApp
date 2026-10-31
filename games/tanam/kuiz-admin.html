@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kuiz Tanam · Admin</title>
+  <link rel="stylesheet" href="tanam.css">
+  <style>
+    body { background:#f3f8ef; }
+    .wrap { max-width:980px; margin:0 auto; padding:1rem 1rem 3rem; }
+    h1 { margin:.3rem 0 .2rem; color:var(--green); }
+    .sub { color:var(--muted); margin:0 0 1rem; }
+    .tools { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; background:#f3f8ef; padding:.6rem 0; }
+    .tools select, .tools input { font:inherit; padding:.45rem .7rem; border-radius:10px; border:1px solid #c8e6c9; background:#fff; }
+    .tools input { flex:1; min-width:180px; }
+    .tools button { font:inherit; font-weight:700; padding:.45rem 1rem; border-radius:999px; border:0; background:var(--green); color:#fff; cursor:pointer; }
+    .stats { color:var(--muted); font-size:.9rem; }
+    section.bank { background:#fff; border-radius:18px; padding:1rem 1.2rem; margin:1rem 0; box-shadow:0 3px 12px rgba(30,80,40,.08); }
+    section.bank h2 { margin:0 0 .6rem; font-size:1.2rem; display:flex; align-items:center; gap:.6rem; }
+    section.bank h2 .art { width:44px; height:44px; border-radius:10px; overflow:hidden; flex:none; }
+    section.bank h2 .art svg { width:100%; height:100%; display:block; }
+    section.bank h2 small { color:var(--muted); font-weight:600; font-size:.85rem; }
+    ol { margin:0; padding-left:1.6rem; }
+    li { padding:.55rem 0; border-top:1px solid #eef5ea; }
+    li:first-child { border-top:0; }
+    li p { margin:0 0 .35rem; font-weight:700; }
+    .opts { display:flex; flex-wrap:wrap; gap:.35rem; }
+    .opts span { font-size:.88rem; padding:.2rem .6rem; border-radius:999px; background:#f1f1f1; color:#555; }
+    .opts span.ok { background:#c8e6c9; color:#1b5e20; font-weight:700; }
+    .opts span.ok::before { content:"✓ "; }
+    .note { background:#fff8e1; border-radius:14px; padding:.7rem 1rem; font-size:.9rem; color:#5d4a00; }
+    @media print { .tools, .note { display:none; } section.bank { box-shadow:none; break-inside:avoid-page; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Kuiz Tanam · Senarai soalan</h1>
+    <p class="sub">Semua soalan dan jawapan yang betul (bertanda ✓). Setiap permainan memilih 8 soalan secara rawak daripada tahap yang dipilih.</p>
+    <p class="note">To add or change a question, edit <code>games/tanam/kuiz-data.js</code> (the first answer is always the right one), or ask Claude. This page only shows the questions; anyone who has the link can open it.</p>
+    <div class="tools">
+      <select id="bank"><option value="">Semua pokok</option></select>
+      <input id="q" type="search" placeholder="Cari soalan atau jawapan…">
+      <button type="button" onclick="window.print()">Cetak</button>
+      <span class="stats" id="stats"></span>
+    </div>
+    <div id="list"></div>
+  </div>
+  <script src="plants.js"></script>
+  <script src="kuiz-data.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    Object.entries(KUIZ_BANKS).forEach(([k, b]) => { const o = document.createElement("option"); o.value = k; o.textContent = b.name; $("bank").append(o); });
+    function render() {
+      const want = $("bank").value, term = $("q").value.trim().toLowerCase();
+      let shown = 0, total = 0;
+      $("list").innerHTML = Object.entries(KUIZ_BANKS).filter(([k]) => !want || k === want).map(([k, b]) => {
+        const P = PLANTS.find(p => p.kind === b.plant);
+        const items = b.qs.map((q, i) => ({ q, i })).filter(({ q }) => !term || q.join(" ").toLowerCase().includes(term));
+        total += b.qs.length; shown += items.length;
+        if (!items.length) return "";
+        return `<section class="bank"><h2><span class="art" style="background:${P.color}">${plantSVG(P.kind, 3)}</span>${esc(b.name)} <small>${b.qs.length} soalan</small></h2><ol>` +
+          items.map(({ q, i }) => `<li value="${i + 1}"><p>${esc(q[0])}</p><div class="opts">${q.slice(1).map((a, j) => `<span class="${j === 0 ? "ok" : ""}">${esc(a)}</span>`).join("")}</div></li>`).join("") +
+          `</ol></section>`;
+      }).join("") || "<p>Tiada soalan dijumpai.</p>";
+      $("stats").textContent = shown + " / " + total + " soalan";
+    }
+    $("bank").addEventListener("change", render);
+    $("q").addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>

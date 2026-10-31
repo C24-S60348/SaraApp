@@ -9,7 +9,7 @@ const STAGE_TEXT = ["Biji", "Anak pokok", "Membesar", "Hasil"];
 
 let mode = null;        // "local" | "online"
 let levelIdx = 0;
-let quiz = [];          // [{ q, opts, ans }]
+let lastSet = [];       // the 8 questions of the current game (same for both players)
 let sides = [];         // one per player
 let playing = false;
 let net = null;         // online state
@@ -21,13 +21,19 @@ function shuffle(a, rnd) { for (let i = a.length - 1; i > 0; i--) { const j = Ma
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmt = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 
-// Same seed -> same question order and same option order for both players.
-function buildQuiz(level, rnd) {
-  const qs = KUIZ_LEVELS[level].qs.map(([q, ...opts]) => {
+// Each game picks 8 of the 20 questions at random. Both players get the SAME 8 questions (fair),
+// but each player sees them in their own random order, with the answers in a random order too.
+// Online, both devices use the same seed, so they pick the same questions and orders.
+function pickSet(level, rnd) {
+  const L = KUIZ_LEVELS[level];
+  const pool = L.bank === "*" ? Object.values(KUIZ_BANKS).flatMap(b => b.qs) : KUIZ_BANKS[L.bank].qs;
+  return shuffle(pool.slice(), rnd).slice(0, QN);
+}
+function orderFor(set, rnd) {
+  return shuffle(set.map(([q, ...opts]) => {
     const order = shuffle([0, 1, 2, 3], rnd);
     return { q, opts: order.map(i => opts[i]), ans: order.indexOf(0) };
-  });
-  return shuffle(qs, rnd);
+  }), rnd);
 }
 
 // Correct answers make the plant grow: 0 = seed, 1-3 = sprout, 4-6 = growing, 7-8 = harvest.
@@ -60,7 +66,7 @@ function card(art, title, sub, fn) {
 const plantArt = (kind, st, bg) => `<div style="background:${bg};width:100%;height:100%">${plantSVG(kind, st)}</div>`;
 
 function chooseLevel(title, cb, back) {
-  modal(title, "Setiap tahap ada " + QN + " soalan.", [{ label: "Kembali", alt: true, fn: back }], [],
+  modal(title, "Setiap tahap ada 20 soalan. Setiap permainan memilih " + QN + " soalan secara rawak.", [{ label: "Kembali", alt: true, fn: back }], [],
     KUIZ_LEVELS.map((L, i) => { const P = PLANTS.find(p => p.kind === L.plant); return card(plantArt(P.kind, 3, P.color), "Tahap " + (i + 1), L.name, () => cb(i)); }));
 }
 function pickPlant(title, text, cb, back) {
@@ -74,6 +80,7 @@ function showMenu() {
   modal("Kuiz Tanam", "Dua pemain menjawab <b>" + QN + " soalan</b> tentang menanam. Setiap jawapan betul membuatkan pokok anda membesar.<br>Siapa paling banyak betul menang. Jika sama, yang lebih pantas menang!", [
     { label: "Main di peranti ini", fn: localStart },
     { label: "Main dalam talian", fn: onlineMenu },
+    { label: "Senarai soalan (admin)", alt: true, fn: () => { location.href = "kuiz-admin.html"; } },
     { label: "Kembali ke Tanam Tanam", alt: true, fn: () => { location.href = "index.html"; } }
   ]);
 }
@@ -91,8 +98,9 @@ function localStart() {
 function newSide(plant, interactive) { return { plant, qi: 0, correct: 0, res: [], ms: 0, done: false, busy: false, interactive, qStart: 0, chain: Promise.resolve() }; }
 
 async function beginGame(plants, rnd) {
-  quiz = buildQuiz(levelIdx, rnd);
-  sides = plants.map((p, i) => newSide(p, mode === "local" || i === net.seat));
+  lastSet = pickSet(levelIdx, rnd);
+  const quizzes = [orderFor(lastSet, rnd), orderFor(lastSet, rnd)];
+  sides = plants.map((p, i) => Object.assign(newSide(p, mode === "local" || i === net.seat), { quiz: quizzes[i] }));
   $("arena").classList.toggle("local", mode === "local");
   [0, 1].forEach(renderSide);
   hideModal();
@@ -135,7 +143,7 @@ function updateSide(i) {
     body.innerHTML = `<div class="donebox">Selesai!</div>`;
     return;
   }
-  const Q = quiz[s.qi];
+  const Q = s.quiz[s.qi];
   $("qn-" + i).textContent = "Soalan " + (s.qi + 1) + " / " + QN;
   $("q-" + i).textContent = Q.q;
   if (!s.interactive) { body.innerHTML = `<div class="waitbox">Rakan sedang menjawab…</div>`; return; }
@@ -147,7 +155,7 @@ function updateSide(i) {
 function answer(i, k) {
   const s = sides[i];
   if (!playing || !s || s.done || s.busy || !s.interactive) return;
-  const ok = k === quiz[s.qi].ans, ms = Math.round(performance.now() - s.qStart), qi = s.qi;
+  const ok = k === s.quiz[s.qi].ans, ms = Math.round(performance.now() - s.qStart), qi = s.qi;
   s.busy = true;
   $("body-" + i).querySelectorAll(".opt").forEach(b => { b.disabled = true; });
   if (mode === "online") sendAnswer(qi, ok, ms);
@@ -189,7 +197,7 @@ function finishGame() {
   const title = winner < 0 ? "Seri!" : mode === "online" ? (winner === net.seat ? "Anda menang!" : "Rakan anda menang") : name(winner) + " menang!";
   SFX.play(winner < 0 || mode === "local" || winner === net.seat ? "win" : "lose");
   const res = sides.map((s, i) => { const P = PLANTS[s.plant]; return `<div class="res${i === winner ? " win" : ""}"><div class="art">${plantArt(P.kind, stageOf(s.correct), P.color)}</div><b>${name(i)}</b><br>${s.correct} / ${QN} betul<br><small>Masa: ${fmt(s.ms)}</small></div>`; }).join("");
-  const review = `<details class="review"><summary>Lihat jawapan yang betul</summary><ol>${quiz.map(Q => `<li>${esc(Q.q)}<br><b>${esc(Q.opts[Q.ans])}</b></li>`).join("")}</ol></details>`;
+  const review = `<details class="review"><summary>Lihat jawapan yang betul</summary><ol>${lastSet.map(([q, right]) => `<li>${esc(q)}<br><b>${esc(right)}</b></li>`).join("")}</ol></details>`;
   const why = winner >= 0 && a.correct === b.correct ? "<p>Sama banyak betul, jadi yang lebih pantas menang.</p>" : "";
   const next = levelIdx < KUIZ_LEVELS.length - 1;
   let buttons;
