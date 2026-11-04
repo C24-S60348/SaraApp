@@ -24,11 +24,12 @@ window.APPS = [
       { t: "Kuiz: play side by side on one device (upright phone: face to face)", done: true },
       { t: "Kuiz online: create / join a room; see your friend's question, right or wrong, and plant (not their answers)", done: true },
       { t: "Firebase rules updated for the quiz (tanamRooms)", done: true },
-      { t: "Test Kuiz online on two real devices", done: false },
+      { t: "Test Kuiz online on two real devices", done: true },
       { t: "Edit questions from the admin page (needs a login so only you can change them)", done: false },
       { t: "Replace code-drawn pictures with Canva images", done: false },
       { t: "Add more plants (timun, terung, pandan)", done: false },
-      { t: "Sound effects and music", done: false },
+      { t: "Sound effects (menu, plant cards, watering, growing, harvest, lessons, quiz)", done: true },
+      { t: "Background music", done: false },
       { t: "Save which plants the player already grew", done: false },
       { t: "English language option", done: false }
     ]
@@ -96,7 +97,7 @@ window.APPS = [
       { t: "Build online Pet Puzzle Battle (room code, shared board seed, send moves)", done: true },
       { t: "Build online Zuma Duo (host runs the game, guest sends touches)", done: true },
       { t: "Database rules so only room data can be used", done: true },
-      { t: "Test Pet Puzzle and Zuma Duo online with two real devices (phone + computer)", done: false }
+      { t: "Test Pet Puzzle and Zuma Duo online with two real devices (phone + computer)", done: true }
     ]
   },
   {

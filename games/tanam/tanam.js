@@ -18,14 +18,16 @@ function show(name) {
 
 // ---- menu ----
 $("menu-art").innerHTML = plantSVG("bunga", 3);
-$("btn-play").addEventListener("click", () => { location.hash = "#pilih"; });
-$("btn-back").addEventListener("click", () => history.back());
+$("btn-play").addEventListener("click", () => { SFX.play("click"); location.hash = "#pilih"; });
+$("btn-back").addEventListener("click", () => { SFX.play("click"); history.back(); });
 // settings (gear, top right)
-$("btn-settings").addEventListener("click", () => { $("settings").hidden = false; });
-$("settings-close").addEventListener("click", () => { $("settings").hidden = true; });
+$("btn-settings").addEventListener("click", () => { SFX.play("swap"); $("settings").hidden = false; });
+$("settings-close").addEventListener("click", () => { SFX.play("click"); $("settings").hidden = true; });
+SFX.bindButton($("btn-sound"));
 $("reset-progress").addEventListener("click", () => {
   if (!confirm("Padam semua bintang dan tahap di peranti ini?")) return;
   try { localStorage.removeItem("tanam-belajar"); } catch (e) { /* ignore */ }
+  SFX.play("rewind");
   $("settings").hidden = true;
 });
 $("settings").addEventListener("click", e => { if (e.target.id === "settings") $("settings").hidden = true; });
@@ -41,7 +43,7 @@ PLANTS.forEach(p => {
   const body = el("div", "card-body");
   body.append(el("h3", null, p.name), el("p", null, p.desc));
   card.append(pic, body);
-  card.addEventListener("click", () => { location.hash = "#p/" + p.id; });
+  card.addEventListener("click", () => { SFX.play("pop", 2); location.hash = "#p/" + p.id; });
   grid.append(card);
 });
 
@@ -73,7 +75,7 @@ function openPlant(p) {
     b.style.background = p.color;
     b.innerHTML = plantSVG(p.kind, i);
     b.append(el("span", null, n));
-    b.addEventListener("click", () => setStage(i));
+    b.addEventListener("click", () => { SFX.play("pop", i * 2); setStage(i); });
     return b;
   }));
   $("d-steps").replaceChildren(...p.steps.map(s => el("li", null, s)));
@@ -83,7 +85,9 @@ function openPlant(p) {
 $("btn-water").addEventListener("click", () => {
   const view = $("stage-view");
   view.classList.add("watering");
+  SFX.play(stage === 3 ? "rewind" : "water");
   setTimeout(() => {
+    SFX.play(stage === 2 ? "win" : stage === 3 ? "pop" : "spark");
     view.classList.remove("watering");
     setStage(stage === 3 ? 0 : stage + 1);
   }, 600);

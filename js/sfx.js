@@ -68,6 +68,7 @@ const SFX = (() => {
     boom: () => { noise({ t: 0.5, vol: 0.32, from: 1400, to: 70 }); tone({ f: 130, to: 38, t: 0.45, type: "sine", vol: 0.4 }); },
     power: () => { [0, 4, 7, 12, 16, 19].forEach((s, i) => tone({ f: note(s + 12), t: 0.22, type: "triangle", vol: 0.14, at: i * 0.05 })); noise({ t: 0.6, vol: 0.18, from: 400, to: 7000 }); },
     spark: () => { tone({ f: 700, to: 1500, t: 0.18, type: "sine", vol: 0.16 }); tone({ f: 1500, t: 0.12, type: "triangle", vol: 0.08, at: 0.12 }); },
+    water: () => { noise({ t: 0.5, vol: 0.12, from: 2400, to: 700 }); [0, 0.12, 0.22, 0.34].forEach((at, i) => tone({ f: 900 + i * 140, to: 1500 + i * 160, t: 0.09, type: "sine", vol: 0.1, at })); },
     danger: () => tone({ f: 110, to: 90, t: 0.18, type: "sawtooth", vol: 0.16 }),
     win: () => [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => tone({ f: note(s), t: 0.3, type: "triangle", vol: 0.16, at: i * 0.1 })),
     lose: () => [7, 4, 0, -5].forEach((s, i) => tone({ f: note(s), t: 0.4, type: "sawtooth", vol: 0.12, at: i * 0.2 }))
